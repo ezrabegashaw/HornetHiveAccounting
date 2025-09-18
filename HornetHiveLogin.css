@@ -1,0 +1,91 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Georgia, serif;
+}
+
+body {
+  background: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  background: #2BA060;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+}
+
+/* Main container */
+main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Login box */
+.login-container {
+  text-align: center;
+  width: 300px;
+}
+
+.logo {
+  font-size: 40px;
+  margin-bottom: 5px;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+/* Inputs */
+input {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #b0bcd3;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+/* Links */
+.links {
+  margin: 10px 0 20px;
+}
+
+.links a {
+  display: block;
+  color: black;
+  text-decoration: none;
+  font-size: 14px;
+  margin: 3px 0;
+}
+
+.links a:hover {
+  text-decoration: underline;
+}
+
+/* Button */
+.login-btn {
+  background: #2BA060;
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background: #248d53;
+}
