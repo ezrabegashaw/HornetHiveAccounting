@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <link rel="stylesheet" type="text/css" href="journalStyle.css">
+    <title>Journalize</title>
+</head>
+
+<body>
+
+    <div class="sideBar">
+        <div style="align-self: center;"><h1>HHV</h1></div>
+
+    </div>
+
+    <div class="journalBody">
+        <div style="border: 2px solid #2ca166; padding: 10px; justify-content: space-between;">
+            <h2>Journalize <button>+Add</button></h2> 
+            
+            <!-- Search Bar -->
+            <div>
+                <input placeholder="Search...">
+                <button>Search</button>
+            </div>
+            
+            <!-- Filter -->
+            <div class="dateFilter">
+                Start Date: <input type="date">
+                End Date: <input type="date">
+                <button>Filter</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs" style ="padding-top: 20px;">
+                <span>All</span> |
+                <span>Aprroved</span> |
+                <span>Pending</span> |
+                <span>Rejected</span>
+            </div>
+
+            <hr>
+
+            <!-- Jounrnal Entries -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Creator</th>
+                        <th>Accounts</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        
+    </div>
+
+</body>
+
+</html>

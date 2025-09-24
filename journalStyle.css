@@ -1,0 +1,37 @@
+body {
+    margin: 0;
+    display: flex;
+}
+
+.sideBar{
+    width: 230px;
+    display: flex;
+    color: white;
+    background:  #2ca166;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px, 0;
+    height: 100vh;
+    top:0;
+    left: 0;
+}
+
+.journalBody{
+    flex: 1;
+    padding: 20px;
+}
+
+.dateFilter {
+    padding-top: 20px;
+}
+
+.tabs span {
+    cursor: pointer;
+    margin: 20px;
+}
+
+table {
+    width: 100%;
+    padding: 10px;
+    border-collapse: collapse;
+}
