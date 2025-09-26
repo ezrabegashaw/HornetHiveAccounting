@@ -78,7 +78,7 @@
       const userId = authData.user.id;
 
       // Step 2: Insert into users table
-      const { error: dbError } = await supabase
+      const { error: dbError } = await supabase 
         .from("users")
         .insert([
           {
