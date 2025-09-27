@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 230px;
+      background-color: #2b9b5d;
+      color: white;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .nav {
+      flex: 1;
+      padding-left: 20px;
+    }
+
+    .nav a {
+      display: block;
+      color: white;
+      text-decoration: none;
+      padding: 12px 0;
+      font-size: 14px;
+    }
+
+    .nav a:hover {
+      background: #258247;
+      padding-left: 10px;
+    }
+
+    .logout {
+      text-align: center;
+      background: #fff;
+      color: #2b9b5d;
+      text-decoration: none;
+      margin: 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      padding: 10px;
+      display: block;
+    }
+
+    .logout:hover {
+      background: #f2f2f2;
+    }
+
+    /* Main */
+    .main {
+      margin-left: 230px;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      margin: 0;
+      flex: 1;
+    }
+
+    .header .search-box {
+      display: flex;
+      align-items: center;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .header input {
+      border: none;
+      padding: 6px 8px;
+      outline: none;
+      width: 180px;
+    }
+
+    .header button {
+      padding: 6px 12px;
+      background: #2b9b5d;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .header button:hover {
+      background: #258247;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #f9f9f9;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">JHHA</div>
+    <div class="nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Chart of Accounts</a>
+      <a href="#">Accounts</a>
+      <a href="#">Users</a>
+      <a href="#">Event Log</a>
+    </div>
+    <a href="#" class="logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <h1>Users</h1>
+      <div class="search-box">
+        <input type="text" placeholder="Search">
+        <button>🔍</button>
+      </div>
+    </div>
+    <table>
+      <tr>
+        <th>Usernames</th>
+        <th>Role</th>
+        <th>Email</th>
+        <th>Active</th>
+      </tr>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
