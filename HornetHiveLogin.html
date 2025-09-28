@@ -8,7 +8,7 @@
 </head>
 <body>
   <header>
-    <h1>Hornet Hive Accountin</h1>
+    <h1>Hornet Hive Accounting</h1>
   </header>
 
   <main>
@@ -23,7 +23,7 @@
         <input type="password" id="password" placeholder="Password" required>
 
         <div class="links">
-          <a href="#" id="signup-link">Create new user</a>
+          <a href="CreateUser.html" id="signup-link">Create new user</a>
           <a href="#" id="login-link">Login</a>
         </div>
 
@@ -47,13 +47,6 @@
     const signupLink = document.getElementById("signup-link");
     const loginLink = document.getElementById("login-link");
     let mode = "login"; // default
-
-    // Switch to signup mode
-    signupLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      mode = "signup";
-      document.querySelector(".login-btn").textContent = "Sign Up";
-    });
 
     // Switch to login mode
     loginLink.addEventListener("click", (e) => {
