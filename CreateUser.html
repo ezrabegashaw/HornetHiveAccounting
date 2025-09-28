@@ -23,7 +23,7 @@
         <input type="text" id="last-name" placeholder="Last Name" required>
         <input type="email" id="email" placeholder="Email" required>
         <input type="text" id="address" placeholder="Address" required>
-        <input type="date" id="dob" placeholder="Date of Birth" required>
+        <input type="text" id="dob" placeholder="Date of Birth (MM/DD/YYYY)" required>
         <input type="password" id="password" placeholder="Password" required>
         <input type="password" id="confirm-password" placeholder="Confirm Password" required>
 
@@ -59,6 +59,17 @@
       const password = document.getElementById("password").value;
       const confirmPassword = document.getElementById("confirm-password").value;
 
+      // Check dob requirements
+      const dobInput = document.getElementById("dob");
+      const dobValue = dobInput.value.trim();
+      const dobRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/;
+
+      if (!dobRegex.test(dobValue)) {
+        alert("Please enter your date of birth in MM/DD/YYYY format.");
+        return;
+      }
+
+      // Check if passwords match
       if (password !== confirmPassword) {
         alert("Passwords do not match!");
         return;
@@ -69,7 +80,7 @@
       if (!passwordRegex.test(password)) {
         alert("Password must:\n- Be at least 8 characters long\n- Start with a letter\n- Include at least 1 letter, 1 number, and 1 special character");
         return;
-  }
+    }
 
       // Step 1: Create auth account
       const { data: authData, error: authError } = await supabase.auth.signUp({
