@@ -64,6 +64,13 @@
         return;
       }
 
+      // Check password requirements
+      const passwordRegex = /^[A-Za-z](?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*]).{7,}$/;
+      if (!passwordRegex.test(password)) {
+        alert("Password must:\n- Be at least 8 characters long\n- Start with a letter\n- Include at least 1 letter, 1 number, and 1 special character");
+        return;
+  }
+
       // Step 1: Create auth account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -79,7 +86,7 @@
 
       // Step 2: Insert into users table
       const { error: dbError } = await supabase 
-        .from("users")
+        .from("userList")
         .insert([
           {
             id: userId,
