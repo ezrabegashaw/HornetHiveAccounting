@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Hornet Hive Accounting</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+
+<body class="auth-page">
+<header class="topbar"><div class="datetime" id="dateTime"></div></header>
+<script>
+  function updateClock(){ const now=new Date(); const options={weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
+  document.getElementById('dateTime').textContent=now.toLocaleString(undefined,options);} updateClock(); setInterval(updateClock,1000);
+</script>
+<div class="auth-shell">
+  <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
+  <div class="login-box">
+    <header><h1>Hornet Hive Accounting</h1></header>
+    <main>
+      <div class="login-container">
+        <h2>HHA</h2>
+        <form id="auth-form">
+          <input type="email" id="email" placeholder="Email" required>
+          <input type="password" id="password" placeholder="Password" required>
+          <div class="links">
+            <a href="#" id="signup-link">Create new user</a>
+            <a href="#" id="login-link">Login</a>
+          </div>
+          <button type="submit" class="login-btn">Login</button>
+        </form>
+      </div>
+    </main>
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js";
+      const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const authForm = document.getElementById("auth-form");
+      const signupLink = document.getElementById("signup-link");
+      const loginLink = document.getElementById("login-link");
+      let mode = "login";
+      signupLink.addEventListener("click",(e)=>{e.preventDefault(); mode="signup"; document.querySelector(".login-btn").textContent="Sign Up";});
+      loginLink.addEventListener("click",(e)=>{e.preventDefault(); mode="login"; document.querySelector(".login-btn").textContent="Login";});
+      authForm.addEventListener("submit", async (event)=>{
+        event.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        if(mode==="login"){
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if(error){ alert("Login failed: " + error.message); }
+          else{ alert("✅ Login successful!"); console.log("User:", data.user); }
+        }else{
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if(error){ alert("Signup failed: " + error.message); }
+          else{ alert("✅ Signup successful! Check your email for confirmation."); console.log("New user:", data.user); }
+        }
+      });
+    </script>
+  </div>
+</div>
+</body>
+</html>

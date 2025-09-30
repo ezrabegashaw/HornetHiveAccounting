@@ -1,0 +1,9 @@
+/* Auth pages (login & create user) */
+.auth-shell{
+  min-height:100vh;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+}
+.login-box{ max-width:380px; width:100%; margin:0 auto; }
+.signup-container, .login-container{ background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }

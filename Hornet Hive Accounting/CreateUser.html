@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Create User - Hornet Hive Accounting</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+
+<body class="auth-page">
+<header class="topbar"><div class="datetime" id="dateTime"></div></header>
+<script>
+  function updateClock(){ const now=new Date(); const options={weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
+  document.getElementById('dateTime').textContent=now.toLocaleString(undefined,options);} updateClock(); setInterval(updateClock,1000);
+</script>
+<div class="auth-shell">
+  <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
+  <div class="login-box">
+    <header><h1>Hornet Hive Accounting</h1></header>
+    <main>
+      <div class="signup-container">
+        <h2>Create Account</h2>
+        <form id="signup-form">
+          <input type="text" id="first-name" placeholder="First Name" required>
+          <input type="text" id="last-name" placeholder="Last Name" required>
+          <input type="email" id="email" placeholder="Email" required>
+          <input type="text" id="address" placeholder="Address" required>
+          <input type="date" id="dob" placeholder="Date of Birth" required>
+          <input type="password" id="password" placeholder="Password" required>
+          <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+          <button type="submit" class="signup-btn">Submit</button>
+        </form>
+        <div class="links"><a href="HornetHiveLogin.html">Back to Login</a></div>
+      </div>
+    </main>
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js";
+      const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const signupForm = document.getElementById("signup-form");
+      signupForm.addEventListener("submit", async (event)=>{
+        event.preventDefault();
+        const firstName = document.getElementById("first-name").value;
+        const lastName = document.getElementById("last-name").value;
+        const email = document.getElementById("email").value;
+        const address = document.getElementById("address").value;
+        const dob = document.getElementById("dob").value;
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm-password").value;
+        if(password !== confirmPassword){ alert("Passwords do not match!"); return; }
+        const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+        if(authError){ alert("Signup failed: " + authError.message); return; }
+        const userId = authData.user.id;
+        const { error: dbError } = await supabase.from("users").insert([{
+          id:userId, first_name:firstName, last_name:lastName, address:address, dob:dob, role:"client"
+        }]);
+        if(dbError){ alert("Failed to save user info: " + dbError.message); }
+        else{ alert("✅ Signup successful! Please check your email for confirmation."); }
+      });
+    </script>
+  </div>
+</div>
+</body>
+</html>

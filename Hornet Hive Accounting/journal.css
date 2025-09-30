@@ -1,0 +1,11 @@
+/* Journal page specifics (moved from inline) */
+.journal-card{
+  border:2px solid #2ca166;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.tabs{ padding-top:20px; }
+.journalBody table{ width:100%; border-collapse:collapse; }
+.journalBody th, .journalBody td{ padding:10px; border-top:1px solid var(--border); text-align:left; }

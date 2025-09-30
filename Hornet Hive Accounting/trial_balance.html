@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Hornet Hive Accounting - Trial Balance</title>
+  <link rel="stylesheet" href="main.css">
+  
+</head>
+
+<body class="has-sidebar">
+
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+<script>
+  const name = localStorage.getItem('username') || 'User';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+  </div>
+  <ul class="nav">
+    <li><a href="Dashboard.html" >Dashboard</a></li>
+    <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+    <li><a href="#accounts">Accounts</a></li>
+    <li><a href="journal.html">Journalize</a></li>
+    <li><a href="trial_balance.html" aria-current="page">Trial Balance</a></li>
+    <li><a href="#income">Income Statement</a></li>
+    <li><a href="#balance">Balance Sheet</a></li>
+    <li><a href="#retained">Statement of Retained Earnings</a></li>
+  </ul>
+  <div class="sidebar-footer"><button class="btn">Logout</button></div>
+</aside>
+
+  <main class="main">
+    <div class="header">
+      <h1>Hornet Hive Accounting</h1>
+      <h2>Trial Balance</h2>
+      <p>As of August 30, 2025</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</body>
+</html>
