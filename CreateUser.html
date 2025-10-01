@@ -36,5 +36,33 @@
     </main>
   </div>
 </div>
+
+<script>
+  const signupForm = document.getElementById("signup-form");
+
+  signupForm.addEventListener("submit", function (event) {
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirm-password").value;
+
+    // Regex: starts with letter, at least 8 chars, contains letter, number, special char
+    const passwordRegex = /^(?=[A-Za-z])(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    // Check password requirements
+    if (!passwordRegex.test(password)) {
+      alert("Password must:\n- Be at least 8 characters\n- Start with a letter\n- Contain a letter, number, and special character");
+      event.preventDefault(); // stop form submission
+      return;
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      alert("Passwords do not match. Please try again.");
+      event.preventDefault();
+      return;
+    }
+  });
+</script>
+
+
 </body>
 </html>
