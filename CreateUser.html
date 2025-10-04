@@ -1,68 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
   <title>Create User - Hornet Hive Accounting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="auth.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
 </head>
-
 <body class="auth-page">
-<header class="topbar"><div class="datetime" id="dateTime"></div></header>
-<script>
-  function updateClock(){ const now=new Date(); const options={weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
-  document.getElementById('dateTime').textContent=now.toLocaleString(undefined,options);} updateClock(); setInterval(updateClock,1000);
-</script>
-<div class="auth-shell">
-  <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
-  <div class="login-box">
-    <header><h1>Hornet Hive Accounting</h1></header>
-    <main>
-      <div class="signup-container">
-        <h2>Create Account</h2>
-        <form id="signup-form">
-          <input type="text" id="first-name" placeholder="First Name" required>
-          <input type="text" id="last-name" placeholder="Last Name" required>
-          <input type="email" id="email" placeholder="Email" required>
-          <input type="text" id="address" placeholder="Address" required>
-          <input type="date" id="dob" placeholder="Date of Birth" required>
-          <input type="password" id="password" placeholder="Password" required>
-          <input type="password" id="confirm-password" placeholder="Confirm Password" required>
-          <button type="submit" class="signup-btn">Submit</button>
-        </form>
-        <div class="links"><a href="HornetHiveLogin.html">Back to Login</a></div>
-      </div>
-    </main>
+
+  <header class="topbar"><div class="datetime" id="dateTime"></div></header>
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                        hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+    }
+    updateClock(); setInterval(updateClock,1000);
+  </script>
+
+  <div class="auth-shell">
+    <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
+    <div class="login-box">
+      <header><h1>Hornet Hive Accounting</h1></header>
+      <main>
+        <div class="signup-container">
+          <h2>Create Account</h2>
+          <form id="signup-form">
+            <input type="text" id="first-name" placeholder="First Name" required>
+            <input type="text" id="last-name" placeholder="Last Name" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="text" id="address" placeholder="Address" required>
+            <input type="date" id="dob" required>
+            <select id="role" required>
+              <option value="">Select Role</option>
+              <option value="Admin">Admin</option>
+              <option value="Manager">Manager</option>
+              <option value="Accountant">Accountant</option>
+            </select>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+            <button type="submit" class="signup-btn" id="signup-button">Submit</button>
+          </form>
+          <div class="links"><a href="HornetHiveLogin.html">Back to Login</a></div>
+        </div>
+      </main>
+    </div>
   </div>
-</div>
 
-<script>
-  const signupForm = document.getElementById("signup-form");
+  <script>
+    console.log("CreateUser.html loaded");
 
-  signupForm.addEventListener("submit", function (event) {
-    const password = document.getElementById("password").value;
-    const confirmPassword = document.getElementById("confirm-password").value;
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("DOM fully loaded");
 
-    // Regex: starts with letter, at least 8 chars, contains letter, number, special char
-    const passwordRegex = /^(?=[A-Za-z])(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+      const signupForm = document.getElementById("signup-form");
+      if (!signupForm) {
+        console.error("signup-form element not found!");
+        return;
+      } else {
+        console.log("signupForm found:", signupForm);
+      }
 
-    // Check password requirements
-    if (!passwordRegex.test(password)) {
-      alert("Password must:\n- Be at least 8 characters\n- Start with a letter\n- Contain a letter, number, and special character");
-      event.preventDefault(); // stop form submission
-      return;
-    }
+      signupForm.addEventListener("submit", async function (event) {
+        console.log("signup-form submit event fired");
+        event.preventDefault();
 
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      alert("Passwords do not match. Please try again.");
-      event.preventDefault();
-      return;
-    }
-  });
-</script>
+        const data = {
+          first_name: document.getElementById("first-name").value.trim(),
+          last_name: document.getElementById("last-name").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          address: document.getElementById("address").value.trim(),
+          dob: document.getElementById("dob").value,
+          role: document.getElementById("role").value,
+          password: document.getElementById("password").value
+        };
+        const confirmPassword = document.getElementById("confirm-password").value;
 
+        console.log("Collected form data:", data, "confirm:", confirmPassword);
+
+        if (data.password !== confirmPassword) {
+          alert("Passwords do not match.");
+          console.warn("Passwords mismatch");
+          return;
+        }
+
+        const passwordRegex = /^(?=[A-Za-z])(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+        if (!passwordRegex.test(data.password)) {
+          alert("Password must start with a letter, contain a letter, number, special character, and be 8+ characters.");
+          console.warn("Password validation failed:", data.password);
+          return;
+        }
+
+        try {
+          console.log("Calling signupUser(...)");
+          const error = await signupUser(data);
+          console.log("Returned from signupUser, error:", error);
+
+          if (error) {
+            console.error("Signup failed:", error);
+            alert("Signup failed: " + (error.message || JSON.stringify(error)));
+            return;
+          }
+
+          alert("Account created successfully! Redirecting to login...");
+          console.log("Redirecting to login page");
+          window.location.href = "HornetHiveLogin.html";
+        } catch (err) {
+          console.error("Unexpected signup error:", err);
+          alert("Unexpected error occurred. See console for details.");
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>

@@ -1,25 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
   <title>Hornet Hive Accounting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="auth.css">
-  <!-- If you later switch to Supabase, you’ll uncomment this line: -->
-  <!-- <script src="https://unpkg.com/@supabase/supabase-js@2"></script> -->
-</head>
 
+  <!-- Load Supabase library first -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Load your custom auth logic -->
+  <script src="auth.js"></script>
+</head>
 <body class="auth-page">
-<header class="topbar"><div class="datetime" id="dateTime"></div></header>
+
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+</header>
+
 <script>
-  function updateClock(){ 
-    const now=new Date(); 
-    const options={weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
-    document.getElementById('dateTime').textContent=now.toLocaleString(undefined,options);
-  } 
-  updateClock(); 
-  setInterval(updateClock,1000);
+  function updateClock() {
+    const now = new Date();
+    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock, 1000);
 </script>
 
 <div class="auth-shell">
@@ -34,57 +40,55 @@
           <input type="password" id="password" placeholder="Password" required>
           <div class="links">
             <a href="CreateUser.html" id="signup-link">Create new user</a>
-            <a href="CreateNewPassword.html" id="forgot-link">Forgot Password</a>
           </div>
           <button type="submit" class="login-btn">Login</button>
         </form>
-
-        <!-- Dev Mock Login (for testing roles without Supabase) -->
-        <div style="margin-top:1rem; text-align:center; opacity:.9;">
-          <label for="dev-role"><small><em>Dev Mock Role:</em></small></label>
-          <select id="dev-role">
-            <option value="administrator">Administrator</option>
-            <option value="manager">Manager</option>
-            <option value="accountant" selected>Accountant</option>
-          </select>
-          <button id="dev-login" type="button">Login as Role</button>
-        </div>
       </div>
     </main>
   </div>
 </div>
 
-<!-- 1) Load your RBAC helper functions -->
-<script src="auth.js"></script>
-
-<!-- 2) Then use them here -->
+<!-- LOGIN SCRIPT WITH DEBUGGING -->
 <script>
-  // Normal login form
-  document.getElementById('auth-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("Login page loaded");
 
-    // In dev mode save as accountant by default
-    if (!window.USE_SUPABASE) {
-      localStorage.setItem('username', email);
-      if (!localStorage.getItem('role')) {
-        localStorage.setItem('role', 'accountant');
-      }
-      location.replace('Dashboard.html');
-    } else {
-      // When Supabase is on handle real login here
-      alert("Supabase login not yet configured");
+    const form = document.getElementById('auth-form');
+
+    if (!form) {
+      console.error("Login form not found!");
+      return;
     }
-  });
 
-  // Dev Mock Role Login )
-  document.getElementById('dev-login').addEventListener('click', () => {
-    const role = document.getElementById('dev-role').value;
-    const email = document.getElementById('email').value.trim() || 'user@example.com';
-    devSetSession(email, role);   // <-- defined in auth.js
-    location.replace('Dashboard.html');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log("Login form submitted");
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      console.log("Email entered:", email);
+      console.log("Password entered:", password);
+
+      try {
+        const { user, error } = await loginUser(email, password);
+
+        if (error) {
+          console.error("Login error:", error);
+          alert("Login failed: " + (error.message || error));
+          return;
+        }
+
+        console.log("Login successful. User data:", user);
+        setSession(user);
+        window.location.href = 'Dashboard.html';
+      } catch (err) {
+        console.error("Unexpected login error:", err);
+        alert("Unexpected login error. See console for details.");
+      }
+    });
   });
 </script>
+
 </body>
 </html>
