@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Hornet Hive Accounting - Admin Dashboard</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="users.css">
+
+  <!-- Loads Supabase library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+</head>
+
+<body>
+
+  <!-- Loads the main sidebar ui while also saving lines of code-->
+  <script src="ImportUI.js"></script>
+  <script>
+    loadUI("sidebar", "AdminSideBar.html")
+  </script>
+  <aside id="sidebar" class="sidebar"></aside>
+
+
+  <script>
+    function updateClock(){
+      const now = new Date();
+      const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+    }
+    updateClock(); setInterval(updateClock,1000);
+  </script>
+
+  <!-- Main Body -->
+  <main class="main">
+    <div class="header">
+      <h1>Hornet Hive Accounting</h1>
+      <h2>Users</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table id="userTable">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script type="module">
+      //Import createClient from global supabase object
+      const { createClient } = supabase;
+
+      //Supabase project info
+      const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+      //Initialize Supabase client
+      const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.USE_SUPABASE = true;
+
+      async function getUsers() {
+        const {data, error} = await supabaseClient
+          .from('users')
+          .select('email, role')
+
+        const tbody = document.querySelector('#userTable tbody');
+        tbody.innerHTML = '';
+
+        data.forEach(user =>{
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${user.email}</td>
+            <td>${user.role}</td>
+            <td>${user.active}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      getUsers();
+    </script>
+  </main>
+
+</body>
+</html>
