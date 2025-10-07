@@ -1,0 +1,26 @@
+{
+  "name": "hornethiveaccounting",
+  "version": "1.0.0",
+  "description": "",
+  "main": "auth.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezrabegashaw/HornetHiveAccounting.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ezrabegashaw/HornetHiveAccounting/issues"
+  },
+  "homepage": "https://github.com/ezrabegashaw/HornetHiveAccounting#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.74.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "nodemailer": "^7.0.7"
+  }
+}
