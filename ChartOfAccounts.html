@@ -5,7 +5,8 @@
   <meta charset="UTF-8">
   <title>Chart of Accounts</title>
   <link rel="stylesheet" href="main.css">
-  
+  <link rel="stylesheet" href="chart_override.css">
+
 </head>
 
 <body class="has-sidebar">
@@ -55,6 +56,7 @@
       <div class="form-actions">
         <input type="text" placeholder="Search">
         <button>Search</button>
+        <button id="addAccountBtn" class="button">Add Account</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -72,5 +74,81 @@
 </div>
 <script src="auth.js"></script>
 <script>initRBAC();</script>
+  
+  <!-- Popup Overlay -->
+<div id="popupOverlay" class="popup-overlay center">
+  <div class="popup-card card">
+    <h2 class="popup-title">Add New Account</h2>
+    <form id="accountForm">
+      <div class="grid">
+        <div><label>Account Name</label><input type="text" id="account_name" required></div>
+        <div><label>Account Number</label><input type="text" id="account_number" required></div>
+        <div><label>Normal Side</label>
+          <select id="normal_side" required>
+            <option value="">Select...</option>
+            <option value="Debit">Debit</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+        <div><label>Category</label><input type="text" id="account_category" required></div>
+        <div><label>Subcategory</label><input type="text" id="account_subcategory"></div>
+        <div><label>Initial Balance</label><input type="number" id="initial_balance" step="0.01" value="0.00"></div>
+        <div><label>Order</label><input type="text" id="account_order" placeholder="e.g. 01"></div>
+        <div>
+          <label>Statement Type</label>
+          <select id="statement_type" required>
+            <option value="">Select...</option>
+            <option value="IS">Income Statement</option>
+            <option value="BS">Balance Sheet</option>
+            <option value="RE">Retained Earnings</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-3"><label>Description</label><textarea id="account_description" rows="2"></textarea></div>
+      <div class="mb-3"><label>Comment</label><textarea id="comment" rows="2"></textarea></div>
+      <div class="form-actions popup-actions">
+        <button type="submit">Save Account</button>
+        <button type="button" class="button cancel-btn" id="closePopup">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const overlay = document.getElementById('popupOverlay');
+const addBtn = document.getElementById('addAccountBtn');
+const closePopup = document.getElementById('closePopup');
+
+addBtn.onclick = () => overlay.style.display = 'flex';
+closePopup.onclick = () => overlay.style.display = 'none';
+
+document.getElementById('accountForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = {
+    account_name: account_name.value.trim(),
+    account_number: account_number.value.trim(),
+    account_description: account_description.value.trim(),
+    normal_side: normal_side.value,
+    account_category: account_category.value.trim(),
+    account_subcategory: account_subcategory.value.trim(),
+    initial_balance: parseFloat(initial_balance.value) || 0,
+    account_order: account_order.value.trim(),
+    statement_type: statement_type.value,
+    comment: comment.value.trim()
+  };
+  if (window.supabase) {
+    const { data: result, error } = await supabase.from('accounts').insert([data]);
+    if (error) alert('Error adding account: ' + error.message);
+    else {
+      alert('Account added successfully!');
+      overlay.style.display = 'none';
+      e.target.reset();
+    }
+  } else {
+    overlay.style.display = 'none';
+    alert('Supabase client not connected.');
+  }
+});
+</script>
 </body>
 </html>
