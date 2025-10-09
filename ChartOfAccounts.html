@@ -118,12 +118,56 @@
 const overlay = document.getElementById('popupOverlay');
 const addBtn = document.getElementById('addAccountBtn');
 const closePopup = document.getElementById('closePopup');
-
 addBtn.onclick = () => overlay.style.display = 'flex';
 closePopup.onclick = () => overlay.style.display = 'none';
 
+// Use global Supabase client from auth.js
+const db = window.supabaseClient;
+
+// Load all accounts
+async function loadAccounts() {
+  const { data, error } = await db
+    .from('accounts')
+    .select('*')
+    .order('account_number', { ascending: true });
+
+  const tbody = document.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  if (error) {
+    console.error(error.message);
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
+    return;
+  }
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
+    return;
+  }
+
+  data.forEach(acc => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${acc.account_number}</td>
+      <td>${acc.account_name}</td>
+      <td>${acc.account_category}</td>
+      <td>${acc.normal_side}</td>
+      <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
+      <td>${acc.user_id || 'N/A'}</td>
+      <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
+      <td>${acc.comment || ''}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', loadAccounts);
+
+// Handle form submission
 document.getElementById('accountForm').addEventListener('submit', async e => {
   e.preventDefault();
+
+  const user_id = localStorage.getItem('user_id');
   const data = {
     account_name: account_name.value.trim(),
     account_number: account_number.value.trim(),
@@ -134,19 +178,19 @@ document.getElementById('accountForm').addEventListener('submit', async e => {
     initial_balance: parseFloat(initial_balance.value) || 0,
     account_order: account_order.value.trim(),
     statement_type: statement_type.value,
-    comment: comment.value.trim()
+    comment: comment.value.trim(),
+    user_id: user_id ? parseInt(user_id) : null
   };
-  if (window.supabase) {
-    const { data: result, error } = await supabase.from('accounts').insert([data]);
-    if (error) alert('Error adding account: ' + error.message);
-    else {
-      alert('Account added successfully!');
-      overlay.style.display = 'none';
-      e.target.reset();
-    }
+
+  const { error } = await db.from('accounts').insert([data]);
+
+  if (error) {
+    alert('Error adding account: ' + error.message);
   } else {
+    alert('Account added successfully!');
     overlay.style.display = 'none';
-    alert('Supabase client not connected.');
+    e.target.reset();
+    await loadAccounts();
   }
 });
 </script>
