@@ -114,33 +114,36 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script>initRBAC();</script>
+
 <script>
 const overlay = document.getElementById('popupOverlay');
 const addBtn = document.getElementById('addAccountBtn');
 const closePopup = document.getElementById('closePopup');
+
 addBtn.onclick = () => overlay.style.display = 'flex';
 closePopup.onclick = () => overlay.style.display = 'none';
 
-// Use global Supabase client from auth.js
 const db = window.supabaseClient;
 
-// Load all accounts
 async function loadAccounts() {
   const { data, error } = await db
     .from('accounts')
     .select('*')
     .order('account_number', { ascending: true });
 
-  const tbody = document.querySelector('tbody');
+  const tbody = document.getElementById('accountTableBody') || document.querySelector('tbody');
   tbody.innerHTML = '';
 
   if (error) {
-    console.error(error.message);
+    console.error("Error loading accounts:", error.message);
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
     return;
   }
 
-  if (!data.length) {
+  if (!data || !data.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
     return;
   }
@@ -163,7 +166,6 @@ async function loadAccounts() {
 
 document.addEventListener('DOMContentLoaded', loadAccounts);
 
-// Handle form submission
 document.getElementById('accountForm').addEventListener('submit', async e => {
   e.preventDefault();
 
@@ -185,6 +187,7 @@ document.getElementById('accountForm').addEventListener('submit', async e => {
   const { error } = await db.from('accounts').insert([data]);
 
   if (error) {
+    console.error("Error adding account:", error.message);
     alert('Error adding account: ' + error.message);
   } else {
     alert('Account added successfully!');
