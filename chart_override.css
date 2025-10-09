@@ -1,0 +1,45 @@
+.popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.popup-card {
+  width: 70%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 24px 28px;
+  animation: fadeIn .25s ease;
+}
+
+.popup-title {
+  color: var(--green);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.cancel-btn {
+  background: #ccc;
+  color: #000;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.popup-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.popup-card::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
