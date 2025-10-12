@@ -72,7 +72,7 @@ Reject: ${rejectLink}
   }
 });
 
-// ===================== Approve Route =====================
+// Approve Route 
 app.get('/approve', async (req, res) => {
   const email = req.query.email;
 
@@ -98,7 +98,7 @@ app.get('/approve', async (req, res) => {
   }
 });
 
-// ===================== Reject Route =====================
+// Reject Route 
 app.get('/reject', async (req, res) => {
   const email = req.query.email;
 
@@ -124,7 +124,7 @@ app.get('/reject', async (req, res) => {
   }
 });
 
-// ===================== Start Server =====================
+// Start Server 
 app.listen(PORT, () => {
   console.log(`HornetHive backend running on port ${PORT}`);
 });
