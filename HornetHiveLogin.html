@@ -81,7 +81,16 @@
 
         console.log("Login successful. User data:", user);
         setSession(user);
-        window.location.href = 'Dashboard.html';
+
+        // Redirect users to admin page or user page
+        const role = await getRole(email);
+        if (role == 'Admin') {
+          window.location.href = 'AdminDashBoard.html';
+        }
+        else {
+          window.location.href = 'Dashboard.html';
+        }
+        
       } catch (err) {
         console.error("Unexpected login error:", err);
         alert("Unexpected login error. See console for details.");
