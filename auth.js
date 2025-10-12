@@ -73,3 +73,20 @@ function logout() {
   localStorage.clear();
   window.location = 'HornetHiveLogin.html';
 }
+
+//Gets user's role by their email
+async function getRole(email) {
+  const { data, error } = await supabaseClient
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .limit(1)
+    .single()
+
+    if (error) return {error};
+
+    if(data.email == email) {
+      return data.role;
+    }
+    else return { error: "No role found"};
+}
