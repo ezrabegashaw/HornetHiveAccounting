@@ -31,10 +31,10 @@
 <div class="auth-shell">
   <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
   <div class="login-box">
-    <header><h1>Hornet Hive Accounting</h1></header>
+    <header><h1 style="padding-bottom: 5px;">Hornet Hive Accounting</h1></header>
     <main>
       <div class="login-container">
-        <h2>Login</h2>
+        <h2 style="padding-bottom: 5px;">Login</h2>
         <form id="auth-form">
           <input type="email" id="email" placeholder="Email" required>
           <input type="password" id="password" placeholder="Password" required>
@@ -84,11 +84,16 @@
 
         // Redirect users to admin page or user page
         const role = await getRole(email);
+        const active = await isActive(email);
+        console.log(active);
         if (role == 'Admin') {
           window.location.href = 'AdminDashBoard.html';
         }
+        else if (!(active)) {
+          window.location.href = 'PendingPage.html';
+        }
         else {
-          window.location.href = 'Dashboard.html';
+          window.location.href = "Dashboard.html";
         }
         
       } catch (err) {

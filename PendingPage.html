@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hornet Hive Accounting - Pending</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+
+<body class="auth-page">
+
+    <header class="topbar">
+    <div class="datetime" id="dateTime"></div>
+        <script>
+            function updateClock() {
+                const now = new Date();
+                const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+            }
+            updateClock(); setInterval(updateClock, 1000);
+        </script>
+    </header>
+
+    <div class="auth-shell">
+    <div class="logo-container"><img class="logo" src="HHAlogo.jpg" alt="HHA Logo"></div>
+    <div class="login-box">
+        <header><h1 style="padding-bottom: 5px;">Hornet Hive Accounting</h1></header>
+        <main>
+        <div class="login-container">
+            <h2 style="padding-bottom: 10px;">Account Pending</h2>
+            <p>
+                Your account is currently on a waitlist to be approved. We will notify you soon when your adminisitator has accepted your request.
+            </p>
+            <div style="padding-top: 5%;">
+                <a href="HornetHiveLogin.html">
+                    <button>Return</button>
+                </a>
+            </div>
+        </main>
+    </div>
+    </div>
+
+
+
+
+</body>
+
+
+</html>
