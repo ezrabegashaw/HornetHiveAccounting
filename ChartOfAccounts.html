@@ -57,6 +57,7 @@
         <input type="text" placeholder="Search">
         <button>Search</button>
         <button id="addAccountBtn" class="button">Add Account</button>
+        <button id="deactivateAccountBtn" class="button">Deactivate Account</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -112,6 +113,26 @@
   </div>
 </div>
 
+<!-- Deactivate Account Popup Overlay -->
+<div id="deactivatePopupOverlay" class="popup-overlay center">
+  <div class="popup-card card">
+    <h2 class="popup-title">Deactivate Account</h2>
+    <form id="deactivateForm">
+      <div class="mb-3">
+        <label for="deactivateAccountSelect">Select Account</label>
+        <select id="deactivateAccountSelect" required>
+          <option value="">-- Select an Account --</option>
+        </select>
+      </div>
+      <div class="form-actions popup-actions">
+        <button type="submit">Deactivate</button>
+        <button type="button" class="button cancel-btn" id="closeDeactivatePopup">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>initRBAC();</script>
@@ -130,6 +151,7 @@ async function loadAccounts() {
   const { data, error } = await db
     .from('accounts')
     .select('*')
+    .eq('is_active', true)        // Only active accounts
     .order('account_number', { ascending: true });
 
   const tbody = document.getElementById('accountTableBody') || document.querySelector('tbody');
@@ -162,6 +184,7 @@ async function loadAccounts() {
   });
 }
 
+
 document.addEventListener('DOMContentLoaded', loadAccounts);
 
 document.getElementById('accountForm').addEventListener('submit', async e => {
@@ -192,6 +215,57 @@ document.getElementById('accountForm').addEventListener('submit', async e => {
     overlay.style.display = 'none';
     e.target.reset();
     await loadAccounts();
+  }
+});
+
+
+const deactivateOverlay = document.getElementById('deactivatePopupOverlay');
+const deactivateBtn = document.getElementById('deactivateAccountBtn');
+const closeDeactivatePopup = document.getElementById('closeDeactivatePopup');
+const deactivateSelect = document.getElementById('deactivateAccountSelect');
+
+deactivateBtn.onclick = async () => {
+  const { data, error } = await db
+    .from('accounts')
+    .select('account_number, account_name')
+    .eq('is_active', true)       // Only show active accounts
+    .order('account_number', { ascending: true });
+
+  deactivateSelect.innerHTML = '<option value="">-- Select an Account --</option>';
+
+  if (!error && data) {
+    data.forEach(acc => {
+      const option = document.createElement('option');
+      option.value = acc.account_number;
+      option.textContent = `${acc.account_name} (${acc.account_number})`;
+      deactivateSelect.appendChild(option);
+    });
+  }
+
+  deactivateOverlay.style.display = 'flex';
+};
+
+
+closeDeactivatePopup.onclick = () => deactivateOverlay.style.display = 'none';
+
+document.getElementById('deactivateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const accountNumber = deactivateSelect.value;
+  if (!accountNumber) return;
+
+  const { error } = await db
+    .from('accounts')
+    .update({ is_active: false })   // set to false
+    .eq('account_number', accountNumber);
+
+  if (error) {
+    alert('Error deactivating account: ' + error.message);
+    console.error(error);
+  } else {
+    alert('Account deactivated!');
+    deactivateOverlay.style.display = 'none';
+    await loadAccounts();          // refresh table to hide deactivated account
   }
 });
 </script>

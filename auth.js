@@ -12,19 +12,26 @@ window.USE_SUPABASE = true;
 
 //sends user data to Supabase
 async function signupUser(data) {
-  const { error } = await supabaseClient
-    .from('users')
-    .insert([{
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      address: data.address,
-      dob: data.dob,
-      password: data.password,
-      role: data.role
-    }]);
-  return error;
+  try {
+    const res = await fetch('http://localhost:3000/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      alert(result.message); // "Signup submitted! Waiting for admin approval."
+    } else {
+      alert(result.error);   // e.g., "Email already registered"
+    }
+  } catch (err) {
+    console.error('Unexpected signup error:', err);
+    alert('Unexpected signup error. Check console.');
+  }
 }
+
 
 //Login function - checks email & password
 async function loginUser(email, password) {
@@ -36,6 +43,9 @@ async function loginUser(email, password) {
     .single();
 
   if (error) return { error };
+
+  // Check if user is approved
+  // if (!data.approved) return { error: "Your account is pending admin approval" };
 
   if (data.password !== password) {
     return { error: "Incorrect password" };
