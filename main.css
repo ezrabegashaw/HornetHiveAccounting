@@ -127,3 +127,89 @@ button:hover,.button:hover{background:#278b54}
 
 /* Hide user info block on auth pages */
 .auth-page .topbar .user{display:none}
+
+/* ===== popup calendar toggle ===== */
+.calendar-popup {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+  z-index: 9999;
+  font-family: var(--font);
+  display: none; /* hidden by default */
+}
+.calendar-popup.show { display: block; animation: fadeIn 0.15s ease; }
+
+@keyframes fadeIn { from {opacity:0; transform:scale(0.96);} to {opacity:1; transform:scale(1);} }
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.calendar-controls { display: flex; gap: 6px; align-items: center; }
+.calendar-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.calendar-month { font-weight: 800; font-size: 14px; color: var(--green-dark); }
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.calendar-weekdays div { text-align: center; font-weight: 700; color: var(--green-dark); padding: 6px 0; }
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar-day {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.calendar-day:hover { background: rgba(43,160,96,0.08); }
+.calendar-day.disabled { opacity: 0.28; cursor: default; }
+.calendar-day.today {
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+
+.calendar-close {
+  background: transparent;
+  border: none;
+  color: var(--green-dark);
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px;
+}
+
+@media (max-width: 420px) {
+  .calendar-popup { left: 8px; top: 8px; width: 280px; }
+}
+
+

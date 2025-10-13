@@ -12,6 +12,7 @@
 <body class="has-sidebar">
 
 <header class="topbar">
+  <button class="btn" id="calendarToggleBtn">Calendar</button>
   <div class="datetime" id="dateTime"></div>
   <div class="user">
     <img id="userAvatar" src="profile.png" alt="User">
@@ -132,6 +133,7 @@
   </div>
 </div>
 
+<div id="calendarContainer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
@@ -268,6 +270,22 @@ document.getElementById('deactivateForm').addEventListener('submit', async e => 
     await loadAccounts();          // refresh table to hide deactivated account
   }
 });
+
+// Load the calendar HTML + JS dynamically and run its script after insertion
+fetch('Calender.html')
+  .then(res => res.text())
+  .then(html => {
+    const container = document.getElementById('calendarContainer');
+    container.innerHTML = html;
+
+    // Extract <script> from loaded HTML and execute it
+    const scripts = container.querySelectorAll('script');
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement('script');
+      newScript.textContent = oldScript.textContent;
+      document.body.appendChild(newScript);
+    });
+  });
 </script>
 </body>
 </html>

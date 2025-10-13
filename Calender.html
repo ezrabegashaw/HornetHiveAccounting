@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+</head>
+<div class="calendar-popup" id="calendarPopup" role="dialog" aria-label="Calendar">
+  <div class="calendar-header">
+    <div class="calendar-controls">
+      <button class="calendar-btn" id="calPrev" aria-label="Previous month">&lt;</button>
+      <div class="calendar-month" id="calMonthLabel">Month Year</div>
+      <button class="calendar-btn" id="calNext" aria-label="Next month">&gt;</button>
+    </div>
+    <div>
+      <button class="calendar-close" id="calTodayBtn" title="Jump to today">Today</button>
+    </div>
+  </div>
+
+  <div class="calendar-weekdays">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+
+  <div class="calendar-grid" id="calendarGrid"></div>
+</div>
+
+<script>
+(function(){
+  const popup = document.getElementById('calendarPopup');
+  const calGrid = document.getElementById('calendarGrid');
+  const monthLabel = document.getElementById('calMonthLabel');
+  const prevBtn = document.getElementById('calPrev');
+  const nextBtn = document.getElementById('calNext');
+  const todayBtn = document.getElementById('calTodayBtn');
+  const toggleBtn = document.getElementById('calendarToggleBtn');
+
+  let viewDate = new Date();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Show/hide when button clicked
+  toggleBtn.addEventListener('click', () => popup.classList.toggle('show'));
+
+  // Close if clicked outside
+  document.addEventListener('click', e => {
+    if (!popup.contains(e.target) && !toggleBtn.contains(e.target)) popup.classList.remove('show');
+  });
+
+  function render() {
+    calGrid.innerHTML = '';
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    monthLabel.textContent = viewDate.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+    const firstOfMonth = new Date(year, month, 1);
+    const startDay = firstOfMonth.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = prevMonthDays - startDay + 1; i <= prevMonthDays; i++) {
+      const d = document.createElement('div');
+      d.className = 'calendar-day disabled';
+      d.textContent = i;
+      calGrid.appendChild(d);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const cell = document.createElement('div');
+      cell.className = 'calendar-day';
+      cell.textContent = d;
+      if (date.getTime() === today.getTime()) cell.classList.add('today');
+      cell.addEventListener('click', () => {
+        console.log('Selected:', date.toISOString().slice(0,10));
+      });
+      calGrid.appendChild(cell);
+    }
+
+    const totalCells = calGrid.children.length;
+    const remainder = totalCells % 7;
+    if (remainder !== 0) {
+      for (let i = 1; i <= 7 - remainder; i++) {
+        const d = document.createElement('div');
+        d.className = 'calendar-day disabled';
+        d.textContent = i;
+        calGrid.appendChild(d);
+      }
+    }
+  }
+
+  prevBtn.addEventListener('click', () => { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1); render(); });
+  nextBtn.addEventListener('click', () => { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1); render(); });
+  todayBtn.addEventListener('click', () => { viewDate = new Date(); render(); });
+
+  render();
+})();
+</script>
