@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>HHA Dashboard (Admin)</title>
+  <link rel="stylesheet" href="main.css">
+</head>
+
+<body class="has-sidebar">
+
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+<script>
+  const name = localStorage.getItem('username') || 'Admin';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+
+  <!-- ADMIN SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashboard.html" aria-current="page">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="header"><h1>Dashboard (Admin)</h1></div>
+    <div class="grid">
+      <div class="card"><h4>Current Ratio</h4><p></p></div>
+      <div class="card"><h4>Return on Assets</h4><p></p></div>
+      <div class="card"><h4>Return on Equity</h4><p></p></div>
+      <div class="card"><h4>Net Profit Margin</h4><p></p></div>
+    </div>
+  </main>
+
+</div>
+
+<script src="auth.js"></script>
+<script>
+  // If your auth.js exposes initRBAC, keep using it:
+  if (typeof initRBAC === 'function') initRBAC();
+</script>
+
+</body>
+</html>

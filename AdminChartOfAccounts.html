@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Chart of Accounts (Admin)</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="chart_override.css">
+</head>
+
+<body class="has-sidebar">
+
+<header class="topbar">
+  <button class="btn" id="calendarToggleBtn">Calendar</button>
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+<script>
+  const name = localStorage.getItem('username') || 'Admin';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+
+  <!-- ADMIN SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashRevised.html">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html" aria-current="page">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <h1>Chart of Accounts (Admin)</h1>
+      <div class="form-actions">
+        <input type="text" placeholder="Search">
+        <button>Search</button>
+        <button id="addAccountBtn" class="button">Add Account</button>
+        <button id="deactivateAccountBtn" class="button">Deactivate Account</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Account Number</th><th>Name</th><th>Type</th><th>Term</th>
+            <th>Balance</th><th>Created By</th><th>Date Created</th><th>Comments</th>
+          </tr>
+        </thead>
+        <tbody id="accountTableBody"><tr><td colspan="8"></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Add Account Popup -->
+<div id="popupOverlay" class="popup-overlay center">
+  <div class="popup-card card">
+    <h2 class="popup-title">Add New Account</h2>
+    <form id="accountForm">
+      <div class="grid">
+        <div><label>Account Name</label><input type="text" id="account_name" required></div>
+        <div><label>Account Number</label><input type="text" id="account_number" required></div>
+        <div><label>Normal Side</label>
+          <select id="normal_side" required>
+            <option value="">Select...</option>
+            <option value="Debit">Debit</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+        <div><label>Category</label><input type="text" id="account_category" required></div>
+        <div><label>Subcategory</label><input type="text" id="account_subcategory"></div>
+        <div><label>Initial Balance</label><input type="number" id="initial_balance" step="0.01" value="0.00"></div>
+        <div><label>Order</label><input type="text" id="account_order" placeholder="e.g. 01"></div>
+        <div>
+          <label>Statement Type</label>
+          <select id="statement_type" required>
+            <option value="">Select...</option>
+            <option value="IS">Income Statement</option>
+            <option value="BS">Balance Sheet</option>
+            <option value="RE">Retained Earnings</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-3"><label>Description</label><textarea id="account_description" rows="2"></textarea></div>
+      <div class="mb-3"><label>Comment</label><textarea id="comment" rows="2"></textarea></div>
+      <div class="form-actions popup-actions">
+        <button type="submit">Save Account</button>
+        <button type="button" class="button cancel-btn" id="closePopup">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Deactivate Account Popup -->
+<div id="deactivatePopupOverlay" class="popup-overlay center">
+  <div class="popup-card card">
+    <h2 class="popup-title">Deactivate Account</h2>
+    <form id="deactivateForm">
+      <div class="mb-3">
+        <label for="deactivateAccountSelect">Select Account</label>
+        <select id="deactivateAccountSelect" required>
+          <option value="">-- Select an Account --</option>
+        </select>
+      </div>
+      <div class="form-actions popup-actions">
+        <button type="submit">Deactivate</button>
+        <button type="button" class="button cancel-btn" id="closeDeactivatePopup">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="calendarContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script>
+  // Keep your RBAC init if present
+  if (typeof initRBAC === 'function') initRBAC();
+</script>
+
+<script>
+const overlay = document.getElementById('popupOverlay');
+const addBtn = document.getElementById('addAccountBtn');
+const closePopup = document.getElementById('closePopup');
+
+addBtn.onclick = () => overlay.style.display = 'flex';
+closePopup.onclick = () => overlay.style.display = 'none';
+
+const db = window.supabaseClient;
+
+async function loadAccounts() {
+  const { data, error } = await db
+    .from('accounts')
+    .select('*')
+    .eq('is_active', true)
+    .order('account_number', { ascending: true });
+
+  const tbody = document.getElementById('accountTableBody');
+  tbody.innerHTML = '';
+
+  if (error) {
+    console.error("Error loading accounts:", error.message);
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
+    return;
+  }
+
+  if (!data || !data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
+    return;
+  }
+
+  data.forEach(acc => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${acc.account_number}</td>
+      <td>${acc.account_name}</td>
+      <td>${acc.account_category}</td>
+      <td>${acc.normal_side}</td>
+      <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
+      <td>${acc.user_id || 'N/A'}</td>
+      <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
+      <td>${acc.comment || ''}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', loadAccounts);
+
+document.getElementById('accountForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const user_id = localStorage.getItem('user_id');
+  const data = {
+    account_name: account_name.value.trim(),
+    account_number: account_number.value.trim(),
+    account_description: account_description.value.trim(),
+    normal_side: normal_side.value,
+    account_category: account_category.value.trim(),
+    account_subcategory: account_subcategory.value.trim(),
+    initial_balance: parseFloat(initial_balance.value) || 0,
+    account_order: account_order.value.trim(),
+    statement_type: statement_type.value,
+    comment: comment.value.trim(),
+    user_id: user_id ? parseInt(user_id) : null
+  };
+
+  const { error } = await db.from('accounts').insert([data]);
+
+  if (error) {
+    console.error("Error adding account:", error.message);
+    alert('Error adding account: ' + error.message);
+  } else {
+    alert('Account added successfully!');
+    overlay.style.display = 'none';
+    e.target.reset();
+    await loadAccounts();
+  }
+});
+
+const deactivateOverlay = document.getElementById('deactivatePopupOverlay');
+const deactivateBtn = document.getElementById('deactivateAccountBtn');
+const closeDeactivatePopup = document.getElementById('closeDeactivatePopup');
+const deactivateSelect = document.getElementById('deactivateAccountSelect');
+
+deactivateBtn.onclick = async () => {
+  const { data, error } = await db
+    .from('accounts')
+    .select('account_number, account_name')
+    .eq('is_active', true)
+    .order('account_number', { ascending: true });
+
+  deactivateSelect.innerHTML = '<option value="">-- Select an Account --</option>';
+
+  if (!error && data) {
+    data.forEach(acc => {
+      const option = document.createElement('option');
+      option.value = acc.account_number;
+      option.textContent = `${acc.account_name} (${acc.account_number})`;
+      deactivateSelect.appendChild(option);
+    });
+  }
+
+  deactivateOverlay.style.display = 'flex';
+};
+
+closeDeactivatePopup.onclick = () => deactivateOverlay.style.display = 'none';
+
+document.getElementById('deactivateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const accountNumber = deactivateSelect.value;
+  if (!accountNumber) return;
+
+  const { error } = await db
+    .from('accounts')
+    .update({ is_active: false })
+    .eq('account_number', accountNumber);
+
+  if (error) {
+    alert('Error deactivating account: ' + error.message);
+    console.error(error);
+  } else {
+    alert('Account deactivated!');
+    deactivateOverlay.style.display = 'none';
+    await loadAccounts();
+  }
+});
+
+// Load the calendar HTML + JS dynamically and run its script after insertion
+fetch('Calendar.html')
+  .then(res => res.text())
+  .then(html => {
+    const container = document.getElementById('calendarContainer');
+    container.innerHTML = html;
+
+    // Execute any <script> tags from the loaded HTML
+    const scripts = container.querySelectorAll('script');
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement('script');
+      newScript.textContent = oldScript.textContent;
+      document.body.appendChild(newScript);
+    });
+  });
+</script>
+
+</body>
+</html>
