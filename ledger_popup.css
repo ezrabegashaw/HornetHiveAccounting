@@ -1,0 +1,65 @@
+.ledger-popup {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.ledger-card {
+  background: #fff;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 950px;
+  max-height: 85%;
+  overflow-y: auto;
+  padding: 25px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.ledger-card h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.ledger-close {
+  float: right;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-table th, .ledger-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.ledger-table th {
+  background: #f3f3f3;
+  font-weight: 600;
+}
+
+.ledger-link {
+  color: #28a745;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
