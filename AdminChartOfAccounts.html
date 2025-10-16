@@ -6,10 +6,10 @@
   <title>Chart of Accounts (Admin)</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="chart_override.css">
+  <link rel="stylesheet" href="ledger_popup.css">
 </head>
 
 <body class="has-sidebar">
-
 <header class="topbar">
   <button class="btn" id="calendarToggleBtn">Calendar</button>
   <div class="datetime" id="dateTime"></div>
@@ -18,6 +18,7 @@
     <span id="userName"></span>
   </div>
 </header>
+
 <script>
   const name = localStorage.getItem('username') || 'Admin';
   const el = document.getElementById('userName');
@@ -32,8 +33,6 @@
 </script>
 
 <div class="app">
-
-  <!-- ADMIN SIDEBAR -->
   <aside class="sidebar">
     <div class="brand">
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
@@ -52,8 +51,8 @@
     <div class="header">
       <h1>Chart of Accounts (Admin)</h1>
       <div class="form-actions">
-        <input type="text" placeholder="Search">
-        <button>Search</button>
+        <input type="text" id="searchInput" placeholder="Search by name or number">
+        <button id="searchBtn">Search</button>
         <button id="addAccountBtn" class="button">Add Account</button>
         <button id="deactivateAccountBtn" class="button">Deactivate Account</button>
       </div>
@@ -63,14 +62,42 @@
       <table>
         <thead>
           <tr>
-            <th>Account Number</th><th>Name</th><th>Type</th><th>Term</th>
-            <th>Balance</th><th>Created By</th><th>Date Created</th><th>Comments</th>
+            <th>Account Number</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Term</th>
+            <th>Balance</th>
+            <th>Created By</th>
+            <th>Date Created</th>
+            <th>Comments</th>
           </tr>
         </thead>
         <tbody id="accountTableBody"><tr><td colspan="8"></td></tr></tbody>
       </table>
     </div>
   </main>
+</div>
+
+<!-- Ledger Popup -->
+<div id="ledgerPopup" class="ledger-popup">
+  <div class="ledger-card">
+    <button class="ledger-close" id="closeLedger">Close</button>
+    <h2 id="ledgerTitle">Account Ledger</h2>
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Account Balance</th>
+        </tr>
+      </thead>
+      <tbody id="ledgerTableBody">
+        <tr><td colspan="5" style="text-align:center;">Select an account to view transactions</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Add Account Popup -->
@@ -136,26 +163,59 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
-  // Keep your RBAC init if present
   if (typeof initRBAC === 'function') initRBAC();
 </script>
 
 <script>
-const overlay = document.getElementById('popupOverlay');
-const addBtn = document.getElementById('addAccountBtn');
-const closePopup = document.getElementById('closePopup');
-
-addBtn.onclick = () => overlay.style.display = 'flex';
-closePopup.onclick = () => overlay.style.display = 'none';
-
 const db = window.supabaseClient;
+const ledgerPopup = document.getElementById('ledgerPopup');
+const ledgerBody = document.getElementById('ledgerTableBody');
+const closeLedger = document.getElementById('closeLedger');
+const ledgerTitle = document.getElementById('ledgerTitle');
 
-async function loadAccounts() {
+closeLedger.onclick = () => ledgerPopup.style.display = 'none';
+
+async function openLedger(accountNumber, accountName) {
+  ledgerPopup.style.display = 'flex';
+  ledgerTitle.textContent = `Ledger for ${accountName} (${accountNumber})`;
+  ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
+
   const { data, error } = await db
-    .from('accounts')
+    .from('ledger')
     .select('*')
-    .eq('is_active', true)
-    .order('account_number', { ascending: true });
+    .eq('account_number', accountNumber)
+    .order('date', { ascending: true });
+
+  ledgerBody.innerHTML = '';
+
+  if (error) {
+    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Error loading ledger</td></tr>';
+    console.error(error.message);
+    return;
+  }
+
+  if (!data || !data.length) {
+    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No transactions found</td></tr>';
+    return;
+  }
+
+  data.forEach(entry => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
+      <td>${entry.description || ''}</td>
+      <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
+      <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
+      <td>${entry.balance ? Number(entry.balance).toFixed(2) : ''}</td>
+    `;
+    ledgerBody.appendChild(row);
+  });
+}
+
+async function loadAccounts(searchTerm = "") {
+  let query = db.from('accounts').select('*').eq('is_active', true);
+  if (searchTerm) query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
+  const { data, error } = await query.order('account_number', { ascending: true });
 
   const tbody = document.getElementById('accountTableBody');
   tbody.innerHTML = '';
@@ -175,7 +235,7 @@ async function loadAccounts() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${acc.account_number}</td>
-      <td>${acc.account_name}</td>
+      <td><span class="ledger-link" onclick="openLedger('${acc.account_number}', '${acc.account_name}')">${acc.account_name}</span></td>
       <td>${acc.account_category}</td>
       <td>${acc.normal_side}</td>
       <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
@@ -187,96 +247,21 @@ async function loadAccounts() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', loadAccounts);
-
-document.getElementById('accountForm').addEventListener('submit', async e => {
-  e.preventDefault();
-
-  const user_id = localStorage.getItem('user_id');
-  const data = {
-    account_name: account_name.value.trim(),
-    account_number: account_number.value.trim(),
-    account_description: account_description.value.trim(),
-    normal_side: normal_side.value,
-    account_category: account_category.value.trim(),
-    account_subcategory: account_subcategory.value.trim(),
-    initial_balance: parseFloat(initial_balance.value) || 0,
-    account_order: account_order.value.trim(),
-    statement_type: statement_type.value,
-    comment: comment.value.trim(),
-    user_id: user_id ? parseInt(user_id) : null
-  };
-
-  const { error } = await db.from('accounts').insert([data]);
-
-  if (error) {
-    console.error("Error adding account:", error.message);
-    alert('Error adding account: ' + error.message);
-  } else {
-    alert('Account added successfully!');
-    overlay.style.display = 'none';
-    e.target.reset();
-    await loadAccounts();
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  loadAccounts();
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    const term = document.getElementById('searchInput').value.trim();
+    loadAccounts(term);
+  });
 });
 
-const deactivateOverlay = document.getElementById('deactivatePopupOverlay');
-const deactivateBtn = document.getElementById('deactivateAccountBtn');
-const closeDeactivatePopup = document.getElementById('closeDeactivatePopup');
-const deactivateSelect = document.getElementById('deactivateAccountSelect');
-
-deactivateBtn.onclick = async () => {
-  const { data, error } = await db
-    .from('accounts')
-    .select('account_number, account_name')
-    .eq('is_active', true)
-    .order('account_number', { ascending: true });
-
-  deactivateSelect.innerHTML = '<option value="">-- Select an Account --</option>';
-
-  if (!error && data) {
-    data.forEach(acc => {
-      const option = document.createElement('option');
-      option.value = acc.account_number;
-      option.textContent = `${acc.account_name} (${acc.account_number})`;
-      deactivateSelect.appendChild(option);
-    });
-  }
-
-  deactivateOverlay.style.display = 'flex';
-};
-
-closeDeactivatePopup.onclick = () => deactivateOverlay.style.display = 'none';
-
-document.getElementById('deactivateForm').addEventListener('submit', async e => {
-  e.preventDefault();
-
-  const accountNumber = deactivateSelect.value;
-  if (!accountNumber) return;
-
-  const { error } = await db
-    .from('accounts')
-    .update({ is_active: false })
-    .eq('account_number', accountNumber);
-
-  if (error) {
-    alert('Error deactivating account: ' + error.message);
-    console.error(error);
-  } else {
-    alert('Account deactivated!');
-    deactivateOverlay.style.display = 'none';
-    await loadAccounts();
-  }
-});
-
-// Load the calendar HTML + JS dynamically and run its script after insertion
+// Calendar loader restored
 fetch('Calendar.html')
   .then(res => res.text())
   .then(html => {
     const container = document.getElementById('calendarContainer');
     container.innerHTML = html;
 
-    // Execute any <script> tags from the loaded HTML
     const scripts = container.querySelectorAll('script');
     scripts.forEach(oldScript => {
       const newScript = document.createElement('script');
@@ -285,6 +270,5 @@ fetch('Calendar.html')
     });
   });
 </script>
-
 </body>
 </html>
