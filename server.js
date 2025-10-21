@@ -78,10 +78,22 @@ app.get('/approve', async (req, res) => {
 
   try {
     // Update user to approved: true
-    await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('users')
       .update({ approved: true })
       .eq('email', email);
+
+    // Error handling logs
+    if (error) {
+      console.error("Supabase update error:", error);
+      return res.status(500).send("Failed to approve user");
+    }
+
+    // Optionally check if a row was updated
+    if (!data || data.length === 0) {
+      console.warn(`No user found for email: ${email}`);
+      return res.status(404).send("User not found");
+    }
 
     // Notify user they can log in
     await transporter.sendMail({
@@ -93,10 +105,11 @@ app.get('/approve', async (req, res) => {
 
     res.send('User approved and notified!');
   } catch (err) {
-    console.error(err);
+    console.error("Server error:", err);
     res.status(500).send('Error approving user');
   }
 });
+
 
 // Reject Route 
 app.get('/reject', async (req, res) => {

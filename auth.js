@@ -45,7 +45,9 @@ async function loginUser(email, password) {
   if (error) return { error };
 
   // Check if user is approved
-  // if (!data.approved) return { error: "Your account is pending admin approval" };
+  if (!data.approved) {
+    window.location.href = 'PendingPage.html';
+  }
 
   if (data.password !== password) {
     return { error: "Incorrect password" };
