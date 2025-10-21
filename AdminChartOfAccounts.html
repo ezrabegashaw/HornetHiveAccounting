@@ -7,6 +7,19 @@
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="chart_override.css">
   <link rel="stylesheet" href="ledger_popup.css">
+  <style>
+    /* Minimal safe defaults (kept tiny so it won't fight your CSS) */
+    .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000}
+    .popup-overlay.show{display:flex}
+    .popup-card{background:#fff;border-radius:12px;max-width:860px;width:95%;padding:1rem}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .form-actions{display:flex;gap:.5rem;justify-content:flex-end}
+    .ledger-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:999}
+    .ledger-popup .ledger-card{background:#fff;border-radius:12px;max-width:900px;width:95%;padding:1rem}
+    .ledger-close{float:right}
+    .ledger-link{color:#0a58ca;cursor:pointer;text-decoration:underline}
+    .button,.btn,button{cursor:pointer}
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -101,13 +114,13 @@
 </div>
 
 <!-- Add Account Popup -->
-<div id="popupOverlay" class="popup-overlay center">
+<div id="popupOverlay" class="popup-overlay">
   <div class="popup-card card">
     <h2 class="popup-title">Add New Account</h2>
-    <form id="accountForm">
+    <form id="accountForm" novalidate>
       <div class="grid">
         <div><label>Account Name</label><input type="text" id="account_name" required></div>
-        <div><label>Account Number</label><input type="text" id="account_number" required></div>
+        <div><label>Account Number</label><input type="text" id="account_number" required inputmode="numeric" pattern="^[0-9]+$"></div>
         <div><label>Normal Side</label>
           <select id="normal_side" required>
             <option value="">Select...</option>
@@ -132,7 +145,7 @@
       <div class="mb-3"><label>Description</label><textarea id="account_description" rows="2"></textarea></div>
       <div class="mb-3"><label>Comment</label><textarea id="comment" rows="2"></textarea></div>
       <div class="form-actions popup-actions">
-        <button type="submit">Save Account</button>
+        <button type="submit" id="saveAccountBtn">Save Account</button>
         <button type="button" class="button cancel-btn" id="closePopup">Cancel</button>
       </div>
     </form>
@@ -140,7 +153,7 @@
 </div>
 
 <!-- Deactivate Account Popup -->
-<div id="deactivatePopupOverlay" class="popup-overlay center">
+<div id="deactivatePopupOverlay" class="popup-overlay">
   <div class="popup-card card">
     <h2 class="popup-title">Deactivate Account</h2>
     <form id="deactivateForm">
@@ -160,115 +173,14 @@
 
 <div id="calendarContainer"></div>
 
+<!-- Supabase + auth bootstrap (auth.js should create window.supabaseClient) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
 
-<script>
-const db = window.supabaseClient;
-const ledgerPopup = document.getElementById('ledgerPopup');
-const ledgerBody = document.getElementById('ledgerTableBody');
-const closeLedger = document.getElementById('closeLedger');
-const ledgerTitle = document.getElementById('ledgerTitle');
-
-closeLedger.onclick = () => ledgerPopup.style.display = 'none';
-
-async function openLedger(accountNumber, accountName) {
-  ledgerPopup.style.display = 'flex';
-  ledgerTitle.textContent = `Ledger for ${accountName} (${accountNumber})`;
-  ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
-
-  const { data, error } = await db
-    .from('ledger')
-    .select('*')
-    .eq('account_number', accountNumber)
-    .order('date', { ascending: true });
-
-  ledgerBody.innerHTML = '';
-
-  if (error) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Error loading ledger</td></tr>';
-    console.error(error.message);
-    return;
-  }
-
-  if (!data || !data.length) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No transactions found</td></tr>';
-    return;
-  }
-
-  data.forEach(entry => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
-      <td>${entry.description || ''}</td>
-      <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
-      <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
-      <td>${entry.balance ? Number(entry.balance).toFixed(2) : ''}</td>
-    `;
-    ledgerBody.appendChild(row);
-  });
-}
-
-async function loadAccounts(searchTerm = "") {
-  let query = db.from('accounts').select('*').eq('is_active', true);
-  if (searchTerm) query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
-  const { data, error } = await query.order('account_number', { ascending: true });
-
-  const tbody = document.getElementById('accountTableBody');
-  tbody.innerHTML = '';
-
-  if (error) {
-    console.error("Error loading accounts:", error.message);
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
-    return;
-  }
-
-  if (!data || !data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
-    return;
-  }
-
-  data.forEach(acc => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${acc.account_number}</td>
-      <td><span class="ledger-link" onclick="openLedger('${acc.account_number}', '${acc.account_name}')">${acc.account_name}</span></td>
-      <td>${acc.account_category}</td>
-      <td>${acc.normal_side}</td>
-      <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
-      <td>${acc.user_id || 'N/A'}</td>
-      <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
-      <td>${acc.comment || ''}</td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadAccounts();
-  document.getElementById('searchBtn').addEventListener('click', () => {
-    const term = document.getElementById('searchInput').value.trim();
-    loadAccounts(term);
-  });
-});
-
-// Calendar loader restored
-fetch('Calendar.html')
-  .then(res => res.text())
-  .then(html => {
-    const container = document.getElementById('calendarContainer');
-    container.innerHTML = html;
-
-    const scripts = container.querySelectorAll('script');
-    scripts.forEach(oldScript => {
-      const newScript = document.createElement('script');
-      newScript.textContent = oldScript.textContent;
-      document.body.appendChild(newScript);
-    });
-  });
-</script>
+<!-- Page logic -->
+<script src="adminChartOfAccounts.js" type="module"></script>
 </body>
 </html>
