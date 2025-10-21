@@ -6,7 +6,6 @@
   <title>Hornet Hive Accounting - Users</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="users.css">
-  
 </head>
 
 <body class="has-sidebar">
@@ -33,105 +32,196 @@
 
 <div class="app">
 
-<aside class="sidebar">
-  <div class="brand">
-    <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-  </div>
-  <ul class="nav">
-    <li><a href="AdminDashRevised.html" >Dashboard</a></li>
-    <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
-    <li><a href="#accounts">Accounts</a></li>
-    <li><a href="users.html">Users</a></li>
-    <li><a href="">Event Log</a></li>
-  </ul>
-  <div class="sidebar-footer"><button class="btn">Logout</button></div>
-</aside>
+  <!-- ADMIN SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashboard.html" aria-current="page">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+  </aside>
 
+
+  
   <main class="main">
     <div class="header">
-      <h1>Hornet Hive Accounting</h1>
-      <h2>Users</h2>
-      <p>As of August 30, 2025</p>
+        <h1>Users</h1>
+        <div class="form-actions">
+          <input id="searchInput" type="text" placeholder="Search by name">
+          <button id="searchBtn">Search</button>
+          <button id="queryUsers">View Pending Uers</button>
+        </div>
     </div>
+
+    <!--Displays Current Users-->
     <div class="table-wrap">
       <table id="userTable">
         <thead>
           <tr>
-            <th>Username</th>
+            <th>Email</th>
+            <th>Name</th>
             <th>Role</th>
             <th>Active</th>
-            <th></th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody>
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
+
+    <!--Edit Pop-up Display-->
+    <div class="popup-overlay" id="editPopupOverlay"></div>
+    <div class="popup" id="editPopup">
+      <h3>Edit User</h3>
+      <label>First Name:</label>
+      <input id="editFirstName" type="text">
+      <label>Last Name</label>
+      <input id="editLastName" type="text">
+      <label>Role</label>
+      <select id="editRole">
+        <option value="Admin">Admin</option>
+        <option value="Manager">Manager</option>
+        <option value="Accountant">Accountant</option>
+      </select>
+      <label>Active</label>
+      <input id="editActive" type="checkbox">
+
+      <div class="popup-buttons">
+        <button>Save</button>
+        <button class='popup-cancel' id="cancelButton">Cancel</button>
+        <button>Delete</button>
+      </div>
+    </div>
+
+
+    <!--Pending Users Pop-up Display-->
+    <div class="popup-overlay" id="pendingUsersOverlay"></div>
+    <div class="popup" id="pendingPopup">
+      <h3>Pending Users</h3>
+      <div class="table-wrap">
+        <table id="pendingTable">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    
+
   </main>
+
 </div>
 
-<script>
-    // Preset data
-    let users = [
-      { username: "kdinh1025", role: "Admin", active: true },
-      { username: "dwhite1025", role: "Manager", active: false },
-      { username: "ebegashaw1025", role: "Accountant", active: true }
-    ];
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script type="module">
 
-    const roles = ["Admin", "Manager", "Accountant"];
-    const tbody = document.querySelector("#userTable tbody");
+  //Import createClient from global supabase object
+  const { createClient } = supabase;
 
-    function renderTable() {
-      tbody.innerHTML = "";
-      users.forEach((user, index) => {
-        const row = document.createElement("tr");
+  //Supabase project info
+  const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-        row.innerHTML = `
-          <td>${user.username}</td>
-          <td>${user.role}</td>
-          <td>${user.active ? "Yes" : "No"}</td>
-          <td>
-            <button class="edit" onclick="editRow(${index})">Edit</button>
-          </td>
-        `;
-        tbody.appendChild(row);
+  //Initialize Supabase client
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.USE_SUPABASE = true;
+
+  async function getUsers() {
+    const {data, error} = await supabaseClient
+      .from('users')
+      .select('*')
+      .eq('approved', true);
+
+      const tableBody = document.getElementById('userTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = ''; // Clear existing rows
+
+      data.forEach(user => {
+        const newRow = tableBody.insertRow();
+
+        const email = newRow.insertCell(0);
+        email.textContent = user.email;
+
+        const name = newRow.insertCell(1);
+        name.textContent = user.first_name + " " + user.last_name;
+
+        const role = newRow.insertCell(2);
+        role.textContent = user.role;
+
+        const active = newRow.insertCell(3);
+        active.textContent = user.active ? '✅' : '❌';
+
+        //Action Buttons
+
+        const actionCell = newRow.insertCell(4);
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.className = 'edit-btn';
+        editButton.onclick = () => showEditPopup(user);
+        actionCell.appendChild(editButton);
+
+
       });
-    }
+  }
 
-    function editRow(index) {
-      const user = users[index];
-      const row = tbody.rows[index];
+  function showEditPopup(user) {
+      // Fill the form with current user data
+      document.getElementById('editFirstName').value = user.first_name;
+      document.getElementById('editLastName').value = user.last_name;
+      document.getElementById('editRole').value = user.role;
+      document.getElementById('editActive').checked = user.active;
+      
+      // Show the popup
+      document.getElementById('editPopupOverlay').style.display = 'block';
+      document.getElementById('editPopup').style.display = 'block';
 
-      row.innerHTML = `
-        <td>${user.username}</td>
-        <td>
-          <select id="role-${index}">
-            ${roles.map(r => `<option value="${r}" ${r === user.role ? "selected" : ""}>${r}</option>`).join("")}
-          </select>
-        </td>
-        <td>
-          <input type="checkbox" id="active-${index}" ${user.active ? "checked" : ""}>
-        </td>
-        <td>
-          <button class="save" onclick="saveRow(${index})">Save</button>
-          <button class="cancel" onclick="renderTable()">Cancel</button>
-        </td>
-      `;
-    }
+      // Handle form submission
+      const form = document.getElementById('editUserForm');
+      form.onsubmit = async (e) => {
+          e.preventDefault();
+          const updates = {
+              first_name: document.getElementById('editFirstName').value,
+              last_name: document.getElementById('editLastName').value,
+              role: document.getElementById('editRole').value,
+              active: document.getElementById('editActive').checked
+          };
+          
+          const success = await updateUser(user.id, updates);
+          if (success) {
+              closeEditPopup();
+          }
+              
+      };
+  }
 
-    function saveRow(index) {
-      const newRole = document.getElementById(`role-${index}`).value;
-      const newActive = document.getElementById(`active-${index}`).checked;
+  function closePopup() {
+    document.getElementById('editPopupOverlay').style.display = 'none';
+    document.getElementById('editPopup').style.display = 'none'
+  }
 
-      users[index].role = newRole;
-      users[index].active = newActive;
+  document.getElementById('editPopupOverlay').onclick = closePopup;
+  document.getElementById('cancelButton').onclick = closePopup;
+    
+  getUsers();
 
-      renderTable();
-    }
+  async function showPendingPopup() {
 
-    // Initial render
-    renderTable();
-  </script>
+  }
+
+</script>
+
 
 
 </body>
