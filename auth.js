@@ -33,28 +33,58 @@ async function signupUser(data) {
 }
 
 
-//Login function - checks email & password
+// Login function - checks email & password
 async function loginUser(email, password) {
   const { data, error } = await supabaseClient
-    .from('users')
-    .select('*')
-    .eq('email', email)
+    .from("users")
+    .select("*")
+    .eq("email", email)
     .limit(1)
     .single();
 
   if (error) return { error };
 
+  // Use per-user attempt tracking
+  const attemptsKey = `attempts_${email}`;
+  let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+
   // Check if user is approved
   if (!data.approved) {
-    window.location.href = 'PendingPage.html';
+    window.location.href = "PendingPage.html";
+    return;
   }
 
+  // Check password
   if (data.password !== password) {
+    attempts++;
+    localStorage.setItem(attemptsKey, attempts);
+
+    console.log(`Wrong password attempt #${attempts} for ${email}`);
+
+    if (attempts >= 3) {
+      console.warn(`Suspending ${email} after ${attempts} failed attempts`);
+
+      const { error: updateError } = await supabaseClient
+        .from("users")
+        .update({ approved: false })
+        .eq("email", email);
+
+      if (updateError) {
+        console.error("Failed to update approval status:", updateError);
+        return { error: "Failed to suspend user" };
+      }
+
+      localStorage.removeItem(attemptsKey);
+    }
+
     return { error: "Incorrect password" };
   }
 
+  // ✅ Successful login: reset attempt counter
+  localStorage.removeItem(attemptsKey);
   return { user: data };
 }
+
 
 //Store user session info in browser
 function setSession(user) {
