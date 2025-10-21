@@ -79,23 +79,28 @@
     <div class="popup-overlay" id="editPopupOverlay"></div>
     <div class="popup" id="editPopup">
       <h3>Edit User</h3>
-      <label>First Name:</label>
-      <input id="editFirstName" type="text">
-      <label>Last Name</label>
-      <input id="editLastName" type="text">
-      <label>Role</label>
-      <select id="editRole">
-        <option value="Admin">Admin</option>
-        <option value="Manager">Manager</option>
-        <option value="Accountant">Accountant</option>
-      </select>
-      <label>Active</label>
-      <input id="editActive" type="checkbox">
+      <form id="editUserForm">
+        <label>First Name:</label>
+        <input id="editFirstName" type="text">
+        <label>Last Name</label>
+        <input id="editLastName" type="text">
+        <label>Role</label>
+        <select id="editRole">
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Accountant">Accountant</option>
+        </select>
+        <label>Active</label>
+        <input id="editActive" type="checkbox">
+        <!-- hidden native submit kept to ensure form.requestSubmit() triggers form's submit event -->
+        <input id="hiddenEditSubmit" type="submit" value="Submit" style="display:none">
+      </form>
+      
 
       <div class="popup-buttons">
-        <button>Save</button>
+        <button id="saveButton" type="button">Save</button>
         <button class='popup-cancel' id="cancelButton">Cancel</button>
-        <button>Delete</button>
+        <button class='popup-delete' id="deleteButton">Delete</button>
       </div>
     </div>
 
@@ -139,6 +144,7 @@
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.USE_SUPABASE = true;
 
+  //Load users onto a table
   async function getUsers() {
     const {data, error} = await supabaseClient
       .from('users')
@@ -176,7 +182,7 @@
       });
   }
 
-  function showEditPopup(user) {
+   async function showEditPopup(user) {
       // Fill the form with current user data
       document.getElementById('editFirstName').value = user.first_name;
       document.getElementById('editLastName').value = user.last_name;
@@ -197,13 +203,62 @@
               role: document.getElementById('editRole').value,
               active: document.getElementById('editActive').checked
           };
-          
+      
+        console.log(updates);
+
           const success = await updateUser(user.id, updates);
           if (success) {
-              closeEditPopup();
+              closePopup();
           }
-              
       };
+
+      // Wire up delete button
+      const deleteBtn = document.getElementById('deleteButton');
+      if (deleteBtn) {
+          // Use onclick to ensure only one handler is attached
+          deleteBtn.onclick = async () => {
+              await deleteUser(user.id);
+              // Refresh table and close popup after successful deletion
+              await getUsers();
+              closePopup();
+          };
+      }
+
+      
+  }
+
+  async function updateUser(userID, updates) {
+    const {error} = await supabaseClient
+    .from('users')
+    .update({
+      first_name: updates.first_name,
+      last_name: updates.last_name,
+      role: updates.role,
+      active: updates.active
+    })
+    .eq('id', userID);
+
+    if (error) {console.log("Updating users failed...")}
+    else {return true;}
+  }
+
+  async function deleteUser(userID) {
+    const text = "Do you wish to remove this user?";
+    if (confirm(text) !== true) {
+      return false;
+    }
+
+    const {error} = await supabaseClient
+      .from('users')
+      .delete()
+      .eq('id', userID);
+
+    if (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+
+    return true;
   }
 
   function closePopup() {
@@ -215,6 +270,17 @@
   document.getElementById('cancelButton').onclick = closePopup;
     
   getUsers();
+
+  // Wire Save button to submit the edit form
+  const saveBtn = document.getElementById('saveButton');
+  const editForm = document.getElementById('editUserForm');
+  if (saveBtn && editForm) {
+    saveBtn.addEventListener('click', () => {
+      // Use requestSubmit to trigger the form's submit event and validation
+      if (typeof editForm.requestSubmit === 'function') editForm.requestSubmit();
+      else editForm.dispatchEvent(new Event('submit', {cancelable: true}));
+    });
+  }
 
   async function showPendingPopup() {
 
