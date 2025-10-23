@@ -1,9 +1,8 @@
-// adminChartOfAccounts.js
+// adminChartOfAccounts.js  (REPLACE THE WHOLE FILE WITH THIS)
 
 // Use the Supabase client from auth.js if available; fallback if needed
 let db = window.supabaseClient;
 if (!db && window.supabase) {
-  // Fallback — replace with your actual URL/key if not set globally
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
   const SUPABASE_ANON_KEY = "your-anon-key-here";
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -13,7 +12,6 @@ if (!db && window.supabase) {
 const addBtn = document.getElementById('addAccountBtn');
 const popup = document.getElementById('popupOverlay');
 const closePopupBtn = document.getElementById('closePopup');
-const saveAccountBtn = document.getElementById('saveAccountBtn');
 const form = document.getElementById('accountForm');
 
 const deactivateBtn = document.getElementById('deactivateAccountBtn');
@@ -37,17 +35,22 @@ function closeModal(el){ el.classList.remove('show'); }
 function asMoney(n){ return Number(n || 0).toFixed(2); }
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
-async function getUserId() {
+// NOTE: Your accounts.user_id is int4 (not the auth UUID). If you don't
+// have an app-level numeric user id handy, set this to null (or 0) to
+// satisfy the schema.
+async function getNumericUserIdOrNull() {
   try {
-    const { data } = await db.auth.getUser();
-    return data?.user?.id || 'admin';
-  } catch { return 'admin'; }
+    // If you have a mapping table from auth uid -> users.id, look it up here.
+    // For now, return null to avoid type mismatch on int4.
+    return null;
+  } catch { return null; }
 }
 
 async function logEvent(action, before, after) {
   try {
     await db.from('eventLog').insert([{
-      userId: await getUserId(),
+      // eventLog schema assumed, adjust if yours differs
+      userId: await getNumericUserIdOrNull(),
       timestamp: new Date().toISOString(),
       action,
       before: before ? JSON.stringify(before) : null,
@@ -62,7 +65,6 @@ async function logEvent(action, before, after) {
 export async function loadAccounts(searchTerm = "") {
   let query = db.from('accounts').select('*').eq('is_active', true);
   if (searchTerm) {
-    // search by name OR number
     query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
   }
   const { data, error } = await query.order('account_number', { ascending: true });
@@ -73,7 +75,7 @@ export async function loadAccounts(searchTerm = "") {
     tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
     return;
   }
-  if (!data || !data.length) {
+  if (!data?.length) {
     tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
     return;
   }
@@ -86,7 +88,7 @@ export async function loadAccounts(searchTerm = "") {
       <td>${acc.account_category ?? ''}</td>
       <td>${acc.normal_side ?? ''}</td>
       <td>${asMoney(acc.balance ?? acc.initial_balance ?? 0)}</td>
-      <td>${acc.user_id || 'N/A'}</td>
+      <td>${acc.user_id ?? 'N/A'}</td>
       <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
       <td>${acc.comment || ''}</td>
     `;
@@ -156,14 +158,18 @@ async function submitAccount(e) {
     normal_side: document.getElementById('normal_side').value,
     account_category: document.getElementById('account_category').value.trim(),
     account_subcategory: document.getElementById('account_subcategory').value.trim() || null,
-    initial_balance: asMoney(document.getElementById('initial_balance').value),
-    order: document.getElementById('account_order').value.trim() || null,
+    // numeric columns -> send numbers (Supabase will accept strings but let's be explicit)
+    initial_balance: Number(document.getElementById('initial_balance').value || 0),
+    // IMPORTANT: your schema uses account_order (varchar) not "order"
+    account_order: document.getElementById('account_order').value.trim() || null,
     statement_type: document.getElementById('statement_type').value,
-    description: document.getElementById('account_description').value.trim() || null,
+    // IMPORTANT: your schema uses account_description (text) not "description"
+    account_description: document.getElementById('account_description').value.trim() || null,
     comment: document.getElementById('comment').value.trim() || null,
     is_active: true,
     date_added: new Date().toISOString(),
-    user_id: await getUserId()
+    // user_id is int4, so use a numeric id from your app if you have one; otherwise null
+    user_id: await getNumericUserIdOrNull()
   };
 
   // Basic validation

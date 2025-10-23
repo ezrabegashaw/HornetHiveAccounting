@@ -36,8 +36,8 @@
       <div class="login-container">
         <h2 style="padding-bottom: 5px;">Login</h2>
         <form id="auth-form">
-          <input type="email" id="email" placeholder="Email" required>
-          <input type="password" id="password" placeholder="Password" required>
+          <input type="text" id="username" placeholder="Username" autocomplete="username" required>
+          <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
           <div class="links">
             <a href="CreateUser.html" id="signup-link">Create new user</a>
             <a href="CreateNewPassword.html" id="forgotpassword-link">Forgot password</a>
@@ -52,51 +52,28 @@
 <!-- LOGIN SCRIPT WITH DEBUGGING -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("Login page loaded");
-
     const form = document.getElementById('auth-form');
-
-    if (!form) {
-      console.error("Login form not found!");
-      return;
-    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      console.log("Login form submitted");
-
-      const email = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
 
-      console.log("Email entered:", email);
-      console.log("Password entered:", password);
-
       try {
-        const { user, error } = await loginUser(email, password);
-
+        const { user, error } = await loginUserByUsername(username, password); // in auth.js
         if (error) {
-          console.error("Login error:", error);
           alert("Login failed: " + (error.message || error));
           return;
         }
 
-        console.log("Login successful. User data:", user);
-        setSession(user);
+        setSession(user); // keep your existing session function
 
-        // Redirect users to admin page or user page
-        const role = await getRole(email);
-        const active = await isActive(email);
-        console.log(active);
-        if (role == 'Admin') {
+        // We already return role/active with the user object.
+        if (user.role === 'Admin') {
           window.location.href = 'AdminDashRevised.html';
+        } else {
+          window.location.href = 'Dashboard.html';
         }
-        /*else if (!(active)) {
-          window.location.href = 'PendingPage.html';
-        }*/
-        else {
-          window.location.href = "Dashboard.html";
-        }
-        
       } catch (err) {
         console.error("Unexpected login error:", err);
         alert("Unexpected login error. See console for details.");
@@ -104,6 +81,7 @@
     });
   });
 </script>
+
 
 </body>
 </html>
