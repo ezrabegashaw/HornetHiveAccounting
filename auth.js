@@ -1,39 +1,125 @@
-//Import createClient from global supabase object
+// Import createClient from global supabase object (via CDN)
 const { createClient } = supabase;
 
-//Supabase project info
+// Supabase project info
 const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-//Initialize Supabase client
+// Initialize Supabase client
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
 window.USE_SUPABASE = true;
 
-//sends user data to Supabase
+/* ----------------------------------------------------------------
+   USERNAME HELPERS
+   Requirement: first initial + full last name + MMYY (created date)
+------------------------------------------------------------------*/
+
+// Build base username: first initial + full last name + MMYY (using "now" at signup)
+function baseUsername(first_name, last_name, when = new Date()) {
+  const mm = String(when.getMonth() + 1).padStart(2, "0");
+  const yy = String(when.getFullYear()).slice(-2);
+  const f = (first_name || "").trim().charAt(0);
+  const l = (last_name || "").trim().replace(/\s+/g, "");
+  return (f + l + mm + yy).toLowerCase();
+}
+
+// Ensure uniqueness: if "flastMMYY" exists, create "flastMMYY-2", "-3", ...
+async function ensureUniqueUsername(desired) {
+  const { data, error } = await supabaseClient
+    .from("users")
+    .select("username")
+    .ilike("username", `${desired}%`);
+
+  if (error || !data || data.length === 0) return desired;
+
+  const existing = new Set(data.map((r) => (r.username || "").toLowerCase()));
+  if (!existing.has(desired.toLowerCase())) return desired;
+
+  let n = 2;
+  while (existing.has(`${desired.toLowerCase()}-${n}`)) n++;
+  return `${desired.toLowerCase()}-${n}`;
+}
+
+/* ----------------------------------------------------------------
+   SIGNUP
+   Saves a unique username to the users table.
+   Called by CreateUser.html submit handler.
+------------------------------------------------------------------*/
 async function signupUser(data) {
   try {
-    const res = await fetch('http://localhost:3000/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+    // Build/confirm final username
+    const seed =
+      (data.username && data.username.trim()) ||
+      baseUsername(data.first_name, data.last_name, new Date());
+    const finalUsername = await ensureUniqueUsername(seed.toLowerCase());
 
-    const result = await res.json();
+    const payload = {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      username: finalUsername, // <-- NEW username field (unique, not null)
+      address: data.address,
+      dob: data.dob,
+      role: data.role,
+      password: data.password, // NOTE: your schema stores plaintext currently
+      active: true,            // adjust defaults as your app needs
+      approved: true
+    };
 
-    if (res.ok) {
-      alert(result.message); // "Signup submitted! Waiting for admin approval."
-    } else {
-      alert(result.error);   // e.g., "Email already registered"
+    const { error } = await supabaseClient
+      .from("users")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Signup insert error:", error);
+      return { error };
     }
+
+    // Optional: user feedback
+    // alert("Account created! You can log in now.");
+    return { error: null };
   } catch (err) {
-    console.error('Unexpected signup error:', err);
-    alert('Unexpected signup error. Check console.');
+    console.error("Unexpected signup error:", err);
+    return { error: { message: "Unexpected signup error" } };
   }
 }
 
+/* ----------------------------------------------------------------
+   LOGIN by USERNAME
+   Used by HornetHiveLogin.html after you switched inputs to username
+------------------------------------------------------------------*/
+async function loginUserByUsername(username, password) {
+  const { data, error } = await supabaseClient
+    .from("users")
+    .select(
+      "id, first_name, last_name, email, username, role, active, approved, password"
+    )
+    .eq("username", username)
+    .single();
 
-// Login function - checks email & password
+  if (error) return { user: null, error };
+
+  // Check approval / password
+  if (!data.approved) {
+    window.location.href = "PendingPage.html";
+    return { user: null, error: { message: "Awaiting approval" } };
+  }
+
+  if (!data || data.password !== password) {
+    return { user: null, error: { message: "Invalid username or password" } };
+  }
+
+  const { password: _drop, ...user } = data; // don’t return password
+  return { user, error: null };
+}
+
+/* ----------------------------------------------------------------
+   (Legacy) LOGIN by EMAIL
+   Kept for backwards compatibility. Not used after the switch.
+------------------------------------------------------------------*/
 async function loginUser(email, password) {
   const { data, error } = await supabaseClient
     .from("users")
@@ -44,99 +130,81 @@ async function loginUser(email, password) {
 
   if (error) return { error };
 
-  // Use per-user attempt tracking
+  // Track attempts per user (by email)
   const attemptsKey = `attempts_${email}`;
   let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
 
-  // Check if user is approved
   if (!data.approved) {
     window.location.href = "PendingPage.html";
     return;
   }
 
-  // Check password
   if (data.password !== password) {
     attempts++;
     localStorage.setItem(attemptsKey, attempts);
 
-    console.log(`Wrong password attempt #${attempts} for ${email}`);
-
     if (attempts >= 3) {
-      console.warn(`Suspending ${email} after ${attempts} failed attempts`);
-
-      const { error: updateError } = await supabaseClient
-        .from("users")
-        .update({ approved: false })
-        .eq("email", email);
-
-      if (updateError) {
-        console.error("Failed to update approval status:", updateError);
-        return { error: "Failed to suspend user" };
-      }
-
+      await supabaseClient.from("users").update({ approved: false }).eq("email", email);
       localStorage.removeItem(attemptsKey);
     }
-
     return { error: "Incorrect password" };
   }
 
-  // ✅ Successful login: reset attempt counter
   localStorage.removeItem(attemptsKey);
   return { user: data };
 }
 
-
-//Store user session info in browser
+/* ----------------------------------------------------------------
+   SESSION / RBAC HELPERS
+------------------------------------------------------------------*/
 function setSession(user) {
-  localStorage.setItem('user_id', user.id);
-  localStorage.setItem('username', user.email);
-  localStorage.setItem('role', user.role);
-  localStorage.setItem('first_name', user.first_name);
+  localStorage.setItem("user_id", user.id);
+  localStorage.setItem("username", user.username || user.email || "");
+  localStorage.setItem("role", user.role || "");
+  localStorage.setItem("first_name", user.first_name || "User");
 }
 
-//Show name on dashboard
 function initRBAC() {
-  const name = localStorage.getItem('first_name') || 'User';
-  const el = document.getElementById('userName');
+  const name = localStorage.getItem("first_name") || "User";
+  const el = document.getElementById("userName");
   if (el) el.textContent = name;
 }
 
-//Logout function
 function logout() {
   localStorage.clear();
-  window.location = 'HornetHiveLogin.html';
+  window.location = "HornetHiveLogin.html";
 }
 
-//Gets user's role by their email
+/* ----------------------------------------------------------------
+   ROLE/ACTIVE LOOKUPS (by email) — kept for compatibility
+   You can ignore these if you no longer use them.
+------------------------------------------------------------------*/
 async function getRole(email) {
   const { data, error } = await supabaseClient
-    .from('users')
-    .select('*')
-    .eq('email', email)
+    .from("users")
+    .select("*")
+    .eq("email", email)
     .limit(1)
-    .single()
+    .single();
 
-    if (error) return {error};
-
-    if(data.email == email) {
-      return data.role;
-    }
-    else return { error: "No role found"};
+  if (error) return { error };
+  if (data?.email === email) return data.role;
+  return { error: "No role found" };
 }
 
-//Gets user's active role via email
 async function isActive(email) {
-    const { data, error } = await supabaseClient
-    .from('users')
-    .select('*')
-    .eq('email', email)
+  const { data, error } = await supabaseClient
+    .from("users")
+    .select("*")
+    .eq("email", email)
     .limit(1)
-    .single()
+    .single();
 
-    if (error) return {error};
-
-    if(data.email == email) {
-      return data.active;
-    }
-    else return { error: "No role found"};
+  if (error) return { error };
+  if (data?.email === email) return data.active;
+  return { error: "No role found" };
 }
+
+// ============================
+// End of file
+// ============================
