@@ -146,16 +146,39 @@ app.post("/api/update-password", async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
+    // Fetch current password and old_passwords
+    const { data: user, error: fetchError } = await supabaseAdmin
       .from("users")
-      .update({ password: newPassword }) // later you can hash this
+      .select("password, old_passwords")
+      .eq("email", email)
+      .eq("username", username)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!user) return res.status(404).json({ message: "No matching user found." });
+
+    const previousPasswords = user.old_passwords || [];
+
+    // Prevent reusing old passwords
+    if (previousPasswords.includes(newPassword) || user.password === newPassword) {
+      return res.status(400).json({ message: "You cannot reuse a previous password." });
+    }
+
+    // Append current password to old_passwords (keep last 5)
+    const updatedOldPasswords = [...previousPasswords, user.password].slice(-5);
+
+    // Update password and old_passwords
+    const { data, error: updateError } = await supabaseAdmin
+      .from("users")
+      .update({
+        password: newPassword,           // TODO: consider hashing
+        old_passwords: updatedOldPasswords
+      })
       .eq("email", email)
       .eq("username", username)
       .select();
 
-    if (error) throw error;
-    if (!data || data.length === 0)
-      return res.status(404).json({ message: "No matching user found." });
+    if (updateError) throw updateError;
 
     res.json({ message: "Password updated successfully!" });
   } catch (err) {
@@ -163,6 +186,7 @@ app.post("/api/update-password", async (req, res) => {
     res.status(500).json({ message: "Server error updating password." });
   }
 });
+
 
 
 
