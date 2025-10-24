@@ -48,44 +48,28 @@ async function ensureUniqueUsername(desired) {
 ------------------------------------------------------------------*/
 async function signupUser(data) {
   try {
-    // Build/confirm final username
-    const seed =
-      (data.username && data.username.trim()) ||
-      baseUsername(data.first_name, data.last_name, new Date());
-    const finalUsername = await ensureUniqueUsername(seed.toLowerCase());
+    // Call your backend instead of Supabase directly
+    const response = await fetch('http://localhost:3000/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
 
-    const payload = {
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      username: finalUsername, // <-- NEW username field (unique, not null)
-      address: data.address,
-      dob: data.dob,
-      role: data.role,
-      password: data.password, // NOTE: your schema stores plaintext currently
-      active: true,            // adjust defaults as your app needs
-      approved: true
-    };
+    const result = await response.json();
 
-    const { error } = await supabaseClient
-      .from("users")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Signup insert error:", error);
-      return { error };
+    if (!response.ok) {
+      console.error('Backend signup error:', result);
+      return { error: result };
     }
 
-    // Optional: user feedback
-    // alert("Account created! You can log in now.");
+    console.log('Signup success:', result);
     return { error: null };
   } catch (err) {
-    console.error("Unexpected signup error:", err);
-    return { error: { message: "Unexpected signup error" } };
+    console.error('Unexpected signup error:', err);
+    return { error: { message: err.message } };
   }
 }
+
 
 /* ----------------------------------------------------------------
    LOGIN by USERNAME
