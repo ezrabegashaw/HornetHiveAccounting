@@ -84,21 +84,55 @@ async function loginUserByUsername(username, password) {
     .eq("username", username)
     .single();
 
-  if (error) return { user: null, error };
+  // If Supabase returns "no rows" (user not found)
+  if (error && error.code === "PGRST116") {
+    return { user: null, error: { message: "No account found with that username" } };
+  }
 
-  // Check approval / password
+  // Handle other Supabase errors
+  if (error) {
+    console.error("Supabase error:", error);
+    return { user: null, error: { message: "Unexpected login error. Please try again later." } };
+  }
+
+  // === 1. Track failed login attempts per username ===
+  const attemptsKey = `attempts_${username}`;
+  let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+
+  // === 2. Handle first-time unapproved users ===
   if (!data.approved) {
     window.location.href = "PendingPage.html";
     return { user: null, error: { message: "Awaiting approval" } };
   }
 
-  if (!data || data.password !== password) {
-    return { user: null, error: { message: "Invalid username or password" } };
+  // === 3. Handle wrong password ===
+  if (data.password !== password) {
+    attempts++;
+    localStorage.setItem(attemptsKey, attempts);
+
+    // After 3 failed attempts → lock the account
+    if (attempts >= 3) {
+      await supabaseClient
+        .from("users")
+        .update({ approved: false })
+        .eq("username", username);
+
+      localStorage.removeItem(attemptsKey);
+      return { user: null, error: { message: "Account locked due to too many failed attempts." } };
+    }
+
+    return {
+      user: null,
+      error: { message: `Incorrect password. Attempt ${attempts} of 3.` },
+    };
   }
 
-  const { password: _drop, ...user } = data; // don’t return password
+  // === 4. Success ===
+  localStorage.removeItem(attemptsKey);
+  const { password: _drop, ...user } = data; // exclude password
   return { user, error: null };
 }
+
 
 /* ----------------------------------------------------------------
    (Legacy) LOGIN by EMAIL
