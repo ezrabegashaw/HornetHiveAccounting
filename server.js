@@ -137,6 +137,52 @@ app.get('/reject', async (req, res) => {
   }
 });
 
+// ===================== Forgot Password Route =====================
+app.post("/api/auth/forgot", async (req, res) => {
+  const { email, username } = req.body;
+
+  try {
+    // 1️⃣ Validate both email and username belong to same user
+    const { data: user, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .eq("username", username)
+      .single();
+
+    if (error || !user) {
+      return res.status(400).json({ error: "Email and username do not match any account." });
+    }
+
+    // 2️⃣ Create a simple reset link (you can customize this page later)
+    const resetLink = `http://127.0.0.1:5500/ResetPassword.html?email=${encodeURIComponent(email)}`;
+
+    // 3️⃣ Send reset link via Nodemailer
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Hornet Hive Password Reset Request",
+      text: `
+Hi ${user.first_name},
+
+We received a request to reset your Hornet Hive password.
+
+Click the link below to reset your password:
+${resetLink}
+
+If you did not request this, you can safely ignore this email.
+      `
+    });
+
+    console.log(`Password reset email sent to ${email}`);
+    res.json({ message: "If the email and username match, a reset link has been sent." });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    res.status(500).json({ error: "Failed to send password reset email." });
+  }
+});
+
+
 // Start Server 
 app.listen(PORT, () => {
   console.log(`HornetHive backend running on port ${PORT}`);
