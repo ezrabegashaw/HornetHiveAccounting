@@ -81,7 +81,8 @@ app.get('/approve', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('users')
       .update({ approved: true })
-      .eq('email', email);
+      .eq('email', email)
+      .select(); 
 
     // Error handling logs
     if (error) {
