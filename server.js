@@ -187,11 +187,6 @@ app.post("/api/update-password", async (req, res) => {
   }
 });
 
-
-
-
-
-
 // Start Server 
 app.listen(PORT, () => {
   console.log(`HornetHive backend running on port ${PORT}`);

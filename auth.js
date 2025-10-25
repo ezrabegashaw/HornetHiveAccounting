@@ -222,7 +222,3 @@ async function isActive(email) {
   if (data?.email === email) return data.active;
   return { error: "No role found" };
 }
-
-// ============================
-// End of file
-// ============================
