@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Event Logs</title>
+  <link rel="stylesheet" href="main.css"/>
+
+  <style>
+    /* Minimal styles that won't fight your main.css */
+    .toolbar {display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem}
+    .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select {padding:.4rem .6rem}
+    .logs-wrap {display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:1rem}
+    @media (min-width: 900px) {.logs-wrap {grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .log-card {background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:1rem; display:flex; flex-direction:column; gap:.75rem}
+    .log-meta {display:flex; flex-wrap:wrap; gap:.75rem; font-size:.9rem; color:#333}
+    .pill {padding:.2rem .5rem; border-radius:999px; background:#f1f5f9; font-weight:600}
+    .pill.add {background:#e6ffed}
+    .pill.update {background:#fff4e5}
+    .pill.deactivate {background:#ffe5e5}
+    .snapshots {display:grid; grid-template-columns:1fr 1fr; gap:.75rem}
+    .snapshot {border:1px solid #e5e7eb; border-radius:10px; padding:.75rem; background:#fafafa}
+    .snapshot h4 {margin:.1rem 0 .5rem 0; font-size:.95rem}
+    .kv {display:grid; grid-template-columns: 160px 1fr; gap:.25rem .5rem; font-size:.92rem}
+    .kv .k {color:#555}
+    .kv .v {font-weight:600}
+    .changed {outline:2px solid #f59e0b; background:#fff7ed; border-radius:.4rem; padding:.05rem .25rem}
+    .empty {color:#9ca3af; font-style:italic}
+    .no-results {text-align:center; color:#666; padding:2rem 1rem}
+    .paginate {display:flex; justify-content:center; gap:.5rem; margin-top:1rem}
+    .paginate button {padding:.4rem .7rem}
+    .brand img {width:28px; height:28px; object-fit:contain; margin-right:.35rem}
+  </style>
+</head>
+
+<body class="has-sidebar">
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+
+<script>
+  const name = localStorage.getItem('username') || 'Admin';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashRevised.html">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html" aria-current="page">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <h1>Event Logs</h1>
+      <div class="toolbar">
+        <input id="q" type="text" placeholder="Search name or number…"/>
+        <select id="actionFilter">
+          <option value="">All actions</option>
+          <option value="add_account">Add Account</option>
+          <option value="update_account">Update Account</option>
+          <option value="deactivate_account">Deactivate Account</option>
+        </select>
+        <label>From <input id="fromDate" type="date"/></label>
+        <label>To <input id="toDate" type="date"/></label>
+        <button id="apply">Apply</button>
+        <button id="clear">Clear</button>
+      </div>
+    </div>
+
+    <div id="logs" class="logs-wrap">
+      <div class="no-results">Loading…</div>
+    </div>
+
+    <div class="paginate">
+      <button id="prevPage" disabled>Prev</button>
+      <span id="pageInfo" style="min-width:8ch; text-align:center;"></span>
+      <button id="nextPage" disabled>Next</button>
+    </div>
+  </main>
+</div>
+
+<!-- Supabase + auth bootstrap (auth.js should create window.supabaseClient) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script type="module" src="eventLogs.js"></script>
+
+<script>
+  // Optional Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+</script>
+</body>
+</html>
