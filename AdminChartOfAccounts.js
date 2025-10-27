@@ -47,19 +47,18 @@ async function getNumericUserIdOrNull() {
 }
 
 async function logEvent(action, before, after) {
-  try {
-    await db.from('eventLog').insert([{
-      // eventLog schema assumed, adjust if yours differs
+    const { error } = await db.from('eventLog').insert([{
       userId: await getNumericUserIdOrNull(),
       timestamp: new Date().toISOString(),
       action,
       before: before ? JSON.stringify(before) : null,
-      after: after ? JSON.stringify(after) : null
+      after:  after  ? JSON.stringify(after)  : null
     }]);
-  } catch (e) {
-    console.warn('logEvent failed:', e?.message);
-  }
-}
+    if (error) {
+      console.warn('logEvent failed:', error.message);
+      alert('Event log insert failed: ' + error.message); // temporary to see issues
+    }
+  }  
 
 // ---------- Load Accounts ----------
 export async function loadAccounts(searchTerm = "") {
