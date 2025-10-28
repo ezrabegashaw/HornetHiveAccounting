@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ledger</title>
   <link rel="stylesheet" href="main.css">
-  <link rel="stylesheet" href="ledger.css">
 </head>
 
 <body class="has-sidebar">
@@ -97,52 +96,73 @@
 <script>
   const db = window.supabaseClient;
 
-  // Get account_id from query string (?account_id=123)
+  // Get account_id from URL (?account_id=123)
   const params = new URLSearchParams(window.location.search);
   const accountId = params.get("account_id");
 
+  // Helper to safely read joined journal entry date/id
+  function getJournalEntryField(entry, fieldName) {
+    if (!entry) return null;
+    // If joined value comes back as an array (common), take [0]
+    const je = Array.isArray(entry.journal_entries) ? entry.journal_entries[0] : entry.journal_entries;
+    if (!je) return null;
+    return je[fieldName] ?? null;
+  }
+
   async function loadLedger() {
+    const tbody = document.getElementById("ledgerTableBody");
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading...</td></tr>`;
+
     if (!accountId) {
-      document.getElementById('ledgerTableBody').innerHTML =
-        '<tr><td colspan="6" style="text-align:center;color:red;">No account selected</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">No account selected</td></tr>`;
       return;
     }
 
-    // Fetch account info for title
-    const { data: accountInfo } = await db
-      .from('accounts')
-      .select('account_name')
-      .eq('account_id', accountId)
+    // Fetch account info (name + normal_side)
+    const { data: accountInfo, error: accErr } = await db
+      .from("accounts")
+      .select("account_name, normal_side")
+      .eq("account_id", accountId)
       .single();
 
-    if (accountInfo) {
+    if (accErr) {
+      console.error("Error loading account info:", accErr);
+      document.getElementById("ledgerTitle").textContent = "Ledger - (error)";
+    } else if (accountInfo) {
       document.getElementById("ledgerTitle").textContent = `Ledger - ${accountInfo.account_name}`;
     }
 
-    // Fetch all ledger entries for this account
+    // Build query: select journal_lines and join parent journal_entries (entry_id, date, status)
+    // Note: use journal_entries!inner or journal_entries (depends on whether FK mapping exists).
     const { data, error } = await db
-      .from('journal_lines')
+      .from("journal_lines")
       .select(`
-        id,
-        date,
+        line_id,
+        journal_entry_id,
+        created_at,
         description,
         debit,
         credit,
-        balance,
-        journal_entries (id)
+        journal_entries (
+          entry_id,
+          date,
+          status
+        )
       `)
-      .eq('account_id', accountId)
-      .order('date', { ascending: true });
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: true }); // order by line creation; stable and valid
 
-    renderLedger(data, error);
+    // Pass normal_side (default to 'debit') to renderer
+    const normalSide = (accountInfo && accountInfo.normal_side) ? accountInfo.normal_side.toString().toLowerCase() : "debit";
+    renderLedger(data, error, normalSide);
   }
 
-  function renderLedger(data, error) {
+  function renderLedger(data, error, normalSide = "debit") {
     const tbody = document.getElementById('ledgerTableBody');
     tbody.innerHTML = '';
 
     if (error) {
-      console.error(error);
+      console.error("Ledger load error:", error);
       tbody.innerHTML = `<tr><td colspan="6" style="color:red;text-align:center;">Error loading ledger</td></tr>`;
       return;
     }
@@ -155,21 +175,42 @@
     let runningBalance = 0;
 
     data.forEach(entry => {
-      runningBalance += (entry.debit || 0) - (entry.credit || 0);
-      const row = document.createElement('tr');
+      // Determine the display date:
+      // prefer journal_entries.date (parent), fallback to created_at (line)
+      const parent = Array.isArray(entry.journal_entries) ? entry.journal_entries[0] : entry.journal_entries;
+      const entryDate = parent?.date ?? entry.created_at ?? null;
+      const displayDate = entryDate ? new Date(entryDate).toLocaleDateString() : '';
 
+      // Determine parent entry id for PR link
+      const parentId = parent?.entry_id ?? entry.journal_entry_id ?? '';
+
+      // Calculate running balance using account normal side
+      if (normalSide === 'credit') {
+        runningBalance += (Number(entry.credit || 0)) - (Number(entry.debit || 0));
+      } else {
+        runningBalance += (Number(entry.debit || 0)) - (Number(entry.credit || 0));
+      }
+
+      const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
+        <td>${displayDate}</td>
         <td>${entry.description || ''}</td>
-        <td><a href="journal.html?entry_id=${entry.journal_entries?.id || entry.id}" class="link">PR-${entry.journal_entries?.id || entry.id}</a></td>
-        <td>${entry.debit ? entry.debit.toFixed(2) : ''}</td>
-        <td>${entry.credit ? entry.credit.toFixed(2) : ''}</td>
+        <td>
+          ${parentId ? `<a href="journal.html?entry_id=${parentId}" class="link">PR-${parentId}</a>` : ''}
+        </td>
+        <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
+        <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
         <td>${runningBalance.toFixed(2)}</td>
       `;
-
       tbody.appendChild(row);
     });
   }
+
+  // Bind filter/search buttons if they exist
+  const filterBtn = document.getElementById("filterBtn");
+  const searchBtn = document.getElementById("searchBtn");
+  if (filterBtn) filterBtn.addEventListener("click", loadLedger);
+  if (searchBtn) searchBtn.addEventListener("click", loadLedger);
 
   document.addEventListener("DOMContentLoaded", loadLedger);
 </script>
