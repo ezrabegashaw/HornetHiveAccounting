@@ -1,162 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Journalize</title>
-  <link rel="stylesheet" href="main.css" />
-  <link rel="stylesheet" href="journal.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Journalize - Accountant</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="journal.css">
 </head>
 
 <body class="has-sidebar">
-  <!-- ===== Top Bar ===== -->
-  <header class="topbar">
-    <div class="datetime" id="dateTime"></div>
-    <div class="user">
-      <img id="userAvatar" src="profile.png" alt="User" />
-      <span id="userName"></span>
-    </div>
-  </header>
-
-  <script>
-    const name = localStorage.getItem("username") || "User";
-    const el = document.getElementById("userName");
-    if (el) el.textContent = name;
-
-    function updateClock() {
-      const now = new Date();
-      const options = {
-        weekday: "short",
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      };
-      document.getElementById("dateTime").textContent = now.toLocaleString(undefined, options);
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-  </script>
-
-  <div class="app">
-    <!-- ===== Sidebar ===== -->
-    <aside class="sidebar">
-      <div class="brand">
-        <img src="HHAlogo.jpg" alt="HHA Logo" />
-        <span>HHA</span>
-      </div>
-      <ul class="nav">
-        <li><a href="Dashboard.html">Dashboard</a></li>
-        <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-        <li><a href="#accounts">Accounts</a></li>
-        <li><a href="journal.html" aria-current="page" class="active">Journalize</a></li>
-        <li><a href="trial_balance.html">Trial Balance</a></li>
-        <li><a href="#income">Income Statement</a></li>
-        <li><a href="#balance">Balance Sheet</a></li>
-        <li><a href="#retained">Statement of Retained Earnings</a></li>
-      </ul>
-      <div class="sidebar-footer">
-        <button class="btn logout-btn">Logout</button>
-      </div>
-    </aside>
-
-    <!-- ===== Main Content ===== -->
-    <main class="main">
-      <div class="journalBody">
-        <div class="journal-card">
-          <div class="header-row">
-            <h2>Journal Entries</h2>
-            <button id="addEntryBtn" class="btn primary">+ Add Entry</button>
-          </div>
-
-          <!-- Filters -->
-          <div class="form-actions">
-            <input id="searchBox" placeholder="Search by account, type, or creator..." />
-            <button class="btn small">Search</button>
-          </div>
-
-          <div class="dateFilter form-actions">
-            <label>Start Date: <input type="date" id="startDate" /></label>
-            <label>End Date: <input type="date" id="endDate" /></label>
-            <button class="btn small">Filter</button>
-          </div>
-
-          <!-- Status Tabs -->
-          <div class="tabs">
-            <span class="tab active">All</span>
-            <span class="tab">Approved</span>
-            <span class="tab">Pending</span>
-            <span class="tab">Rejected</span>
-          </div>
-          <hr />
-
-          <!-- Journal Entries Table -->
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Creator</th>
-                  <th>Accounts</th>
-                  <th>Debit</th>
-                  <th>Credit</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Entries will be injected here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </main>
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
   </div>
+</header>
 
-  <!-- ===== Modal for Adding Entry ===== -->
-  <div id="entryModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>New Journal Entry</h3>
-      <form id="journalForm">
-        <label>
-          Date:
-          <input type="date" id="entryDate" required />
-        </label>
-        <label>
-          Type:
-          <select id="entryType" required>
-            <option value="">Select Type</option>
-            <option value="adjusting">Adjusting</option>
-            <option value="closing">Closing</option>
-            <option value="reversing">Reversing</option>
-          </select>
-        </label>
-        <label>
-          Description:
-          <textarea id="entryDescription" placeholder="Enter description..." required></textarea>
-        </label>
+<script>
+const name = localStorage.getItem('username') || 'User';
+document.getElementById('userName').textContent = name;
 
-        <div class="account-lines">
-          <h4>Accounts</h4>
-          <div id="accountRows">
-            <div class="account-row">
-              <input placeholder="Account Name" class="account-name" />
-              <input placeholder="Debit" type="number" class="debit" />
-              <input placeholder="Credit" type="number" class="credit" />
+function updateClock(){
+  const now = new Date();
+  const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                    hour:'2-digit', minute:'2-digit', second:'2-digit' };
+  document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+}
+updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="journal.html" aria-current="page">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="#income">Income Statement</a></li>
+      <li><a href="#balance">Balance Sheet</a></li>
+      <li><a href="#retained">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="journalBody">
+      <div class="journal-card">
+        <h2>Journalize</h2>
+
+        <div class="form-actions">
+          <input id="searchInput" placeholder="Search journal entries by account, amount, or date">
+          <button id="searchBtn">Search</button>
+        </div>
+
+        <div class="dateFilter form-actions">
+          <label>Start Date: <input type="date" id="startDate"></label>
+          <label>End Date: <input type="date" id="endDate"></label>
+          <button id="filterBtn">Filter</button>
+        </div>
+
+        <hr>
+
+        <div id="journalFormContainer">
+          <form id="journalForm">
+            <div id="journalLinesContainer"></div>
+
+            <button type="button" id="addDebitBtn">+ Add Debit</button>
+            <button type="button" id="addCreditBtn">+ Add Credit</button>
+
+            <div class="totals">
+              <span>Total Debit: $<span id="totalDebit">0.00</span></span>
+              <span>Total Credit: $<span id="totalCredit">0.00</span></span>
             </div>
-          </div>
-          <button type="button" class="btn small add-line">+ Add Line</button>
-        </div>
 
-        <div class="form-actions modal-buttons">
-          <button type="submit" class="btn primary">Save</button>
-          <button type="button" class="btn secondary" id="closeModal">Cancel</button>
+            <label>Description (optional):
+              <input type="text" id="journalDescription">
+            </label>
+
+            <label>Attach Source Document:
+              <input type="file" id="journalFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.png">
+            </label>
+
+            <button type="submit">Submit Journal Entry</button>
+            <div id="errorMsg" style="color:red;margin-top:10px;"></div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
-  </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+
+<script>
+const db = window.supabaseClient;
+let journalLinesContainer = document.getElementById('journalLinesContainer');
+let totalDebitEl = document.getElementById('totalDebit');
+let totalCreditEl = document.getElementById('totalCredit');
+let errorMsgEl = document.getElementById('errorMsg');
+
+let debitTotal = 0;
+let creditTotal = 0;
+
+// Load accounts for dropdowns
+let accounts = [];
+async function loadAccounts() {
+  const { data } = await db.from('accounts').select('id, account_name').eq('is_active', true).order('account_name');
+  accounts = data;
+}
+loadAccounts();
+
+// Helpers to create line rows
+function createLineRow(type) {
+  const row = document.createElement('div');
+  row.className = 'journal-line';
+  row.innerHTML = `
+    <select class="accountSelect">
+      <option value="">Select account</option>
+      ${accounts.map(a => `<option value="${a.id}">${a.account_name}</option>`).join('')}
+    </select>
+    <input type="number" class="amountInput" placeholder="Amount" step="0.01" min="0">
+    <button type="button" class="removeLineBtn">Remove</button>
+  `;
+  row.dataset.type = type;
+  journalLinesContainer.appendChild(row);
+
+  row.querySelector('.removeLineBtn').addEventListener('click', () => {
+    row.remove();
+    recalcTotals();
+  });
+
+  row.querySelector('.amountInput').addEventListener('input', recalcTotals);
+}
+
+// Add Debit / Credit
+document.getElementById('addDebitBtn').addEventListener('click', () => createLineRow('debit'));
+document.getElementById('addCreditBtn').addEventListener('click', () => createLineRow('credit'));
+
+function recalcTotals() {
+  debitTotal = 0; creditTotal = 0;
+  document.querySelectorAll('.journal-line').forEach(row => {
+    const val = parseFloat(row.querySelector('.amountInput').value) || 0;
+    if (row.dataset.type === 'debit') debitTotal += val;
+    else creditTotal += val;
+  });
+  totalDebitEl.textContent = debitTotal.toFixed(2);
+  totalCreditEl.textContent = creditTotal.toFixed(2);
+}
+
+// Submit Journal Entry
+document.getElementById('journalForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorMsgEl.textContent = '';
+
+  if (debitTotal !== creditTotal) {
+    errorMsgEl.textContent = 'Error: Total debits must equal total credits.';
+    return;
+  }
+
+  // Gather lines
+  const lines = [];
+  document.querySelectorAll('.journal-line').forEach(row => {
+    const accountId = row.querySelector('.accountSelect').value;
+    const amount = parseFloat(row.querySelector('.amountInput').value) || 0;
+    if (!accountId || amount <= 0) return; // skip invalid
+    if (row.dataset.type === 'debit') lines.push({ account_id: accountId, debit: amount, credit: 0 });
+    else lines.push({ account_id: accountId, debit: 0, credit: amount });
+  });
+
+  if (!lines.length) {
+    errorMsgEl.textContent = 'Error: Add at least one debit and one credit line.';
+    return;
+  }
+
+  const description = document.getElementById('journalDescription').value;
+  const fileInput = document.getElementById('journalFile');
+
+  // Insert journal entry
+  const { data: journalData, error: journalError } = await db.from('journal_entries').insert([
+    { description, status: 'pending', created_by: name }
+  ]).select();
+
+  if (journalError) {
+    errorMsgEl.textContent = 'Error creating journal entry.';
+    console.error(journalError);
+    return;
+  }
+
+  const journalId = journalData[0].id;
+
+  // Insert lines
+  const { error: linesError } = await db.from('journal_lines').insert(
+    lines.map(l => ({ ...l, journal_entry_id: journalId }))
+  );
+
+  if (linesError) {
+    errorMsgEl.textContent = 'Error creating journal lines.';
+    console.error(linesError);
+    return;
+  }
+
+  alert('Journal entry submitted for approval!');
+  document.getElementById('journalForm').reset();
+  journalLinesContainer.innerHTML = '';
+  recalcTotals();
+});
+</script>
 </body>
 </html>
