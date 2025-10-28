@@ -81,7 +81,8 @@ app.get('/approve', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('users')
       .update({ approved: true })
-      .eq('email', email);
+      .eq('email', email)
+      .select(); 
 
     // Error handling logs
     if (error) {
@@ -134,6 +135,56 @@ app.get('/reject', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Error rejecting user');
+  }
+});
+
+// ===================== Update Password Route =====================
+app.post("/api/update-password", async (req, res) => {
+  const { email, username, newPassword } = req.body;
+
+  if (!email || !username || !newPassword) {
+    return res.status(400).json({ message: "Email, Username, and new password are required." });
+  }
+
+  try {
+    // Fetch current password and old_passwords
+    const { data: user, error: fetchError } = await supabaseAdmin
+      .from("users")
+      .select("password, old_passwords")
+      .eq("email", email)
+      .eq("username", username)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!user) return res.status(404).json({ message: "No matching user found." });
+
+    const previousPasswords = user.old_passwords || [];
+
+    // Prevent reusing old passwords
+    if (previousPasswords.includes(newPassword) || user.password === newPassword) {
+      return res.status(400).json({ message: "You cannot reuse a previous password." });
+    }
+
+    // Append current password to old_passwords (keep last 5)
+    const updatedOldPasswords = [...previousPasswords, user.password].slice(-5);
+
+    // Update password and old_passwords
+    const { data, error: updateError } = await supabaseAdmin
+      .from("users")
+      .update({
+        password: newPassword,           // TODO: consider hashing
+        old_passwords: updatedOldPasswords
+      })
+      .eq("email", email)
+      .eq("username", username)
+      .select();
+
+    if (updateError) throw updateError;
+
+    res.json({ message: "Password updated successfully!" });
+  } catch (err) {
+    console.error("Error updating password:", err);
+    res.status(500).json({ message: "Server error updating password." });
   }
 });
 

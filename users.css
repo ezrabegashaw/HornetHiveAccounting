@@ -59,8 +59,23 @@ input, select {
     border-radius: 5px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1000;
-    min-width: 300px;
+    min-width: 500px;
 }
+
+.popup-pending {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 1000px;
+}
+
 .popup-overlay {
     display: none;
     position: fixed;
@@ -114,4 +129,29 @@ input, select {
 }
 .edit-btn:hover {
     background-color: #1976D2;
+}
+
+.popup-delete {
+    background-color: #f44336;
+    color: white;
+}
+
+.popup-delete:hover {
+    background-color: #962820;
+}
+
+.popup-cancel:hover {
+    background-color: #535353;
+}
+
+.reject-btn {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.reject-btn:hover {
+    background-color: #cc0000;
 }

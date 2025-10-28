@@ -18,7 +18,7 @@
   </div>
 </header>
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock(){
@@ -79,30 +79,35 @@
     <div class="popup-overlay" id="editPopupOverlay"></div>
     <div class="popup" id="editPopup">
       <h3>Edit User</h3>
-      <label>First Name:</label>
-      <input id="editFirstName" type="text">
-      <label>Last Name</label>
-      <input id="editLastName" type="text">
-      <label>Role</label>
-      <select id="editRole">
-        <option value="Admin">Admin</option>
-        <option value="Manager">Manager</option>
-        <option value="Accountant">Accountant</option>
-      </select>
-      <label>Active</label>
-      <input id="editActive" type="checkbox">
+      <form id="editUserForm">
+        <label>First Name:</label>
+        <input id="editFirstName" type="text">
+        <label>Last Name</label>
+        <input id="editLastName" type="text">
+        <label>Role</label>
+        <select id="editRole">
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Accountant">Accountant</option>
+        </select>
+        <label>Active</label>
+        <input id="editActive" type="checkbox">
+        <!-- hidden native submit kept to ensure form.requestSubmit() triggers form's submit event -->
+        <input id="hiddenEditSubmit" type="submit" value="Submit" style="display:none">
+      </form>
+      
 
       <div class="popup-buttons">
-        <button>Save</button>
+        <button id="saveButton" type="button">Save</button>
         <button class='popup-cancel' id="cancelButton">Cancel</button>
-        <button>Delete</button>
+        <button class='popup-delete' id="deleteButton">Delete</button>
       </div>
     </div>
 
 
     <!--Pending Users Pop-up Display-->
     <div class="popup-overlay" id="pendingUsersOverlay"></div>
-    <div class="popup" id="pendingPopup">
+    <div class="popup-pending" id="pendingPopup">
       <h3>Pending Users</h3>
       <div class="table-wrap">
         <table id="pendingTable">
@@ -117,13 +122,15 @@
           <tbody></tbody>
         </table>
       </div>
-    </div>
-    
+    </div>    
 
   </main>
 
 </div>
 
+<script src="'users.js">
+  
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script type="module">
@@ -139,6 +146,7 @@
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.USE_SUPABASE = true;
 
+  //Load users onto a table
   async function getUsers() {
     const {data, error} = await supabaseClient
       .from('users')
@@ -176,7 +184,7 @@
       });
   }
 
-  function showEditPopup(user) {
+   async function showEditPopup(user) {
       // Fill the form with current user data
       document.getElementById('editFirstName').value = user.first_name;
       document.getElementById('editLastName').value = user.last_name;
@@ -197,27 +205,164 @@
               role: document.getElementById('editRole').value,
               active: document.getElementById('editActive').checked
           };
-          
+      
           const success = await updateUser(user.id, updates);
           if (success) {
-              closeEditPopup();
+              await getUsers(); // Refresh the table with updated data
+              closePopup();
           }
-              
       };
+
+      // Wire up delete button
+      const deleteBtn = document.getElementById('deleteButton');
+      if (deleteBtn) {
+          // Use onclick to ensure only one handler is attached
+          deleteBtn.onclick = async () => {
+              await deleteUser(user.id);
+              // Refresh table and close popup after successful deletion
+              await getUsers();
+              closePopup();
+          };
+      }
+
+      
+  }
+  //Updates users information
+  async function updateUser(userID, updates) {
+    const {error} = await supabaseClient
+    .from('users')
+    .update({
+      first_name: updates.first_name,
+      last_name: updates.last_name,
+      role: updates.role,
+      active: updates.active
+    })
+    .eq('id', userID);
+
+    if (error) {
+      console.error("Error approving user:", error);
+      return false;
+    }
+    return true;
+  }
+
+  //Deletes the user from the database
+  async function deleteUser(userID) {
+    const text = "Do you wish to reject this user?";
+    if (confirm(text) !== true) {
+      return false;
+    }
+
+    const {error} = await supabaseClient
+      .from('users')
+      .delete()
+      .eq('id', userID);
+
+    if (error) {
+      console.error('Error rejecting user:', error);
+      return false;
+    }
+
+    return true;
   }
 
   function closePopup() {
     document.getElementById('editPopupOverlay').style.display = 'none';
-    document.getElementById('editPopup').style.display = 'none'
+    document.getElementById('editPopup').style.display = 'none';
+    document.getElementById('pendingUsersOverlay').style.display = 'none';
+    document.getElementById('pendingPopup').style.display = 'none';
   }
 
   document.getElementById('editPopupOverlay').onclick = closePopup;
   document.getElementById('cancelButton').onclick = closePopup;
+  document.getElementById('pendingUsersOverlay').onclick = closePopup;
     
   getUsers();
 
-  async function showPendingPopup() {
+  // Wire Save button to submit the edit form
+  const saveBtn = document.getElementById('saveButton');
+  const editForm = document.getElementById('editUserForm');
+  if (saveBtn && editForm) {
+    saveBtn.addEventListener('click', () => {
+      // Use requestSubmit to trigger the form's submit event and validation
+      if (typeof editForm.requestSubmit === 'function') editForm.requestSubmit();
+      else editForm.dispatchEvent(new Event('submit', {cancelable: true}));
+    });
+  }
 
+  document.getElementById('queryUsers').onclick = showPendingPopup;
+  async function showPendingPopup() {
+    document.getElementById('pendingUsersOverlay').style.display = 'block';
+    document.getElementById('pendingPopup').style.display = 'block';
+
+    //Prints users onto the table
+    const tableBody = document.getElementById('pendingTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = ''; // Clear existing rows
+
+    const {data, error} = await supabaseClient
+      .from('users')
+      .select('*')
+      .eq('approved', false);
+
+    data.forEach(user => {
+        const newRow = tableBody.insertRow();
+
+        const email = newRow.insertCell(0);
+        email.textContent = user.email;
+
+        const name = newRow.insertCell(1);
+        name.textContent = user.first_name + " " + user.last_name;
+
+        const role = newRow.insertCell(2);
+        role.textContent = user.role;
+
+        //Action
+        const actionCell = newRow.insertCell(3);
+        const approveButton = document.createElement('button');
+        approveButton.textContent = 'Approve';
+        approveButton.className = 'approve-btn';
+        approveButton.onclick = () => approveUser(user.id);
+
+        const rejectButton = document.createElement('button');
+        rejectButton.textContent = 'Reject';
+        rejectButton.className = 'reject-btn';
+        rejectButton.onclick = () => rejectUser(user.id);
+        
+        actionCell.appendChild(approveButton);
+        actionCell.appendChild(rejectButton);
+    });
+
+    document.getElementById('confirmReject').onclick = async () => {
+    await rejectUser(userID);
+    closePopup();
+    };
+  }
+
+  async function approveUser(userID) {
+    const {error} = await supabaseClient
+      .from('users')
+      .update({approved: true, active: true})
+      .eq('id', userID)
+
+      showPendingPopup();
+  }
+
+  async function rejectUser(userID) {
+    const text = "Do you wish to remove this user?";
+    if (confirm(text) !== true) {
+      return false;
+    }
+    const {error} = await supabaseClient
+        .from('users')
+        .delete()
+        .eq('id', userID);
+
+        if (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+    showPendingPopup();
+    return true; 
   }
 
 </script>

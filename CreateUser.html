@@ -33,6 +33,22 @@
             <input type="text" id="first-name" placeholder="First Name" required>
             <input type="text" id="last-name" placeholder="Last Name" required>
             <input type="email" id="email" placeholder="Email" required>
+          
+            <!-- Username row: read-only + Generate button -->
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input
+                type="text"
+                id="username"
+                placeholder="Click Generate Username"
+                readonly
+                required
+                style="flex:1; background:#f5f5f5;"
+              >
+              <button type="button" id="gen-username-btn" class="signup-btn" style="white-space:nowrap;">
+                Generate Username
+              </button>
+            </div>
+          
             <input type="text" id="address" placeholder="Address" required>
             <input type="date" id="dob" required>
             <select id="role" required>
@@ -45,6 +61,9 @@
             <input type="password" id="confirm-password" placeholder="Confirm Password" required>
             <button type="submit" class="signup-btn" id="signup-button">Submit</button>
           </form>
+          
+          
+          
           <div class="links"><a href="HornetHiveLogin.html">Back to Login</a></div>
         </div>
       </main>
@@ -53,61 +72,91 @@
 
   <script>
     console.log("CreateUser.html loaded");
-
+  
+    // Build base username like: f + lastname + MMYY (today)
+    function makeBaseUsername(first, last, when = new Date()) {
+      const mm = String(when.getMonth() + 1).padStart(2, '0');
+      const yy = String(when.getFullYear()).slice(-2);
+      const f = (first || '').trim().charAt(0);
+      const l = (last || '').trim().replace(/\s+/g, '');
+      return (f + l + mm + yy).toLowerCase();
+    }
+  
     document.addEventListener("DOMContentLoaded", () => {
-      console.log("DOM fully loaded");
-
       const signupForm = document.getElementById("signup-form");
-      if (!signupForm) {
-        console.error("signup-form element not found!");
-        return;
-      } else {
-        console.log("signupForm found:", signupForm);
-      }
-
+      const firstEl = document.getElementById("first-name");
+      const lastEl  = document.getElementById("last-name");
+      const userEl  = document.getElementById("username");
+      const genBtn  = document.getElementById("gen-username-btn");
+  
+      if (!signupForm) { console.error("signup-form not found"); return; }
+  
+      // On click: generate username once the names are filled
+      genBtn.addEventListener('click', async () => {
+        const first = firstEl.value.trim();
+        const last  = lastEl.value.trim();
+        if (!first || !last) {
+          alert("Please enter both first and last name before generating the username.");
+          return;
+        }
+  
+        // Base username (first initial + last + MMYY)
+        const base = makeBaseUsername(first, last, new Date());
+  
+        // If ensureUniqueUsername is available (from auth.js), use it so the user sees the final unique value
+        let finalName = base;
+        try {
+          if (typeof ensureUniqueUsername === 'function') {
+            finalName = await ensureUniqueUsername(base);
+          }
+        } catch (e) {
+          console.warn("Uniqueness check failed, falling back to base username:", e);
+        }
+  
+        userEl.value = finalName;
+        // mark as generated so we can require this before submit
+        userEl.dataset.generated = "true";
+      });
+  
+      // Submit handler
       signupForm.addEventListener("submit", async function (event) {
-        console.log("signup-form submit event fired");
         event.preventDefault();
-
+  
+        // Make sure they clicked "Generate Username" at least once
+        if (!userEl.value.trim() || userEl.dataset.generated !== "true") {
+          alert('Please click "Generate Username" before submitting.');
+          return;
+        }
+  
         const data = {
-          first_name: document.getElementById("first-name").value.trim(),
-          last_name: document.getElementById("last-name").value.trim(),
+          first_name: firstEl.value.trim(),
+          last_name: lastEl.value.trim(),
           email: document.getElementById("email").value.trim(),
+          username: userEl.value.trim().toLowerCase(), // server still ensures uniqueness
           address: document.getElementById("address").value.trim(),
           dob: document.getElementById("dob").value,
           role: document.getElementById("role").value,
           password: document.getElementById("password").value
         };
         const confirmPassword = document.getElementById("confirm-password").value;
-
-        console.log("Collected form data:", data, "confirm:", confirmPassword);
-
+  
         if (data.password !== confirmPassword) {
           alert("Passwords do not match.");
-          console.warn("Passwords mismatch");
           return;
         }
-
+  
         const passwordRegex = /^(?=[A-Za-z])(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
         if (!passwordRegex.test(data.password)) {
-          alert("Password must start with a letter, contain a letter, number, special character, and be 8+ characters.");
-          console.warn("Password validation failed:", data.password);
+          alert("Password must start with a letter, include a number & special character, and be 8+ characters.");
           return;
         }
-
+  
         try {
-          console.log("Calling signupUser(...)");
-          const error = await signupUser(data);
-          console.log("Returned from signupUser, error:", error);
-
+          const { error } = await signupUser(data); // from auth.js
           if (error) {
-            console.error("Signup failed:", error);
             alert("Signup failed: " + (error.message || JSON.stringify(error)));
             return;
           }
-
-         // alert("Account created successfully! Redirecting to login...");
-          console.log("Redirecting to login page");
           window.location.href = "HornetHiveLogin.html";
         } catch (err) {
           console.error("Unexpected signup error:", err);
@@ -116,6 +165,8 @@
       });
     });
   </script>
+  
+  
 
 </body>
 </html>
