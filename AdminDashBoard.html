@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Hornet Hive Accounting - Admin Dashboard</title>
+    <title>Hornet Hive Accounting - Add Account</title>
     <link rel="stylesheet" href="main.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -18,134 +18,53 @@
         <div class="datetime" id="dateTime"></div>
     </header>
 
-    <!-- App Layout -->
-    <div class="app">
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar"></aside>
-        <script src="ImportUI.js"></script>
-        <script>
-            loadUI("sidebar", "AdminSideBar.html");
-        </script>
-
-        <!-- Main Content -->
-        <main class="main">
-            <!-- Service Selector -->
-            <section class="card mb-4">
-                <h2>Select a Service</h2>
-                <select id="serviceSelect" title="Choose an account service">
-                    <option value="">-- Choose --</option>
-                    <option value="add">Add Account</option>
-                    <option value="view">View Accounts</option>
-                    <option value="eventLog">View Event Log</option>
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Add Account Form -->
+        <form id="addAccountForm" class="card">
+            <h3>Add New Account</h3>
+            <label>Account Name: <input type="text" name="accountName" required /></label>
+            <label>Account Number: <input type="text" name="accountNumber" pattern="^[0-9]+$" required /></label>
+            <label>Description: <textarea name="description"></textarea></label>
+            <label>
+                Normal Side:
+                <select name="normalSide">
+                    <option value="debit">Debit</option>
+                    <option value="credit">Credit</option>
                 </select>
-            </section>
+            </label>
+            <label>Category: <input type="text" name="category" /></label>
+            <label>Subcategory: <input type="text" name="subcategory" /></label>
+            <label>Initial Balance: <input type="number" step="0.01" name="initialBalance" /></label>
+            <label>Debit: <input type="number" step="0.01" name="debit" /></label>
+            <label>Credit: <input type="number" step="0.01" name="credit" /></label>
+            <label>Balance: <input type="number" step="0.01" name="balance" /></label>
+            <label>Date Added: <input type="datetime-local" name="dateAdded" /></label>
+            <label>User ID: <input type="text" name="userId" readonly /></label>
+            <label>Order: <input type="text" name="order" /></label>
+            <label>
+                Statement:
+                <select name="statement">
+                    <option value="IS">Income Statement</option>
+                    <option value="BS">Balance Sheet</option>
+                    <option value="RE">Retained Earnings</option>
+                </select>
+            </label>
+            <label>Comment: <textarea name="comment"></textarea></label>
+            <div class="form-actions">
+                <button type="submit" title="Save account to database">Add Account</button>
+                <button onclick="window.location.href='users.html'"> Cancel</button>
 
-            <!-- Dynamic Content Area -->
-            <section id="dynamicContent" class="grid">
-                <!-- Add Account Form -->
-                <form id="addAccountForm" class="card" style="display:none">
-                    <h3>Add New Account</h3>
-                    <label>Account Name: <input type="text" name="accountName" required /></label>
-                    <label>Account Number: <input type="text" name="accountNumber" pattern="^[0-9]+$" required /></label>
-                    <label>Description: <textarea name="description"></textarea></label>
-                    <label>
-                        Normal Side:
-                        <select name="normalSide">
-                            <option value="debit">Debit</option>
-                            <option value="credit">Credit</option>
-                        </select>
-                    </label>
-                    <label>Category: <input type="text" name="category" /></label>
-                    <label>Subcategory: <input type="text" name="subcategory" /></label>
-                    <label>Initial Balance: <input type="number" step="0.01" name="initialBalance" /></label>
-                    <label>Debit: <input type="number" step="0.01" name="debit" /></label>
-                    <label>Credit: <input type="number" step="0.01" name="credit" /></label>
-                    <label>Balance: <input type="number" step="0.01" name="balance" /></label>
-                    <label>Date Added: <input type="datetime-local" name="dateAdded" /></label>
-                    <label>User ID: <input type="text" name="userId" readonly /></label>
-                    <label>Order: <input type="text" name="order" /></label>
-                    <label>
-                        Statement:
-                        <select name="statement">
-                            <option value="IS">Income Statement</option>
-                            <option value="BS">Balance Sheet</option>
-                            <option value="RE">Retained Earnings</option>
-                        </select>
-                    </label>
-                    <label>Comment: <textarea name="comment"></textarea></label>
-                    <div class="form-actions">
-                        <button type="submit" title="Save account to database">Add Account</button>
-                    </div>
-                </form>
-
-                <!-- View Accounts Table -->
-                <section id="viewAccounts" class="table-wrap card" style="display:none">
-                    <h3>Chart of Accounts</h3>
-                    <div class="form-actions mb-2">
-                        <input type="text" id="searchBar" placeholder="Search by name or number" />
-                        <button id="refreshAccounts" title="Reload account list">🔄 Refresh</button>
-                    </div>
-                    <table id="accountsTable">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Number</th>
-                                <th>Category</th>
-                                <th>Subcategory</th>
-                                <th>Balance</th>
-                                <th>Statement</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </section>
-
-                <!-- Event Log -->
-                <section id="eventLog" class="table-wrap card" style="display:none">
-                    <h3>Event Log</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Event ID</th>
-                                <th>User ID</th>
-                                <th>Timestamp</th>
-                                <th>Action</th>
-                                <th>Before</th>
-                                <th>After</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </section>
-            </section>
-        </main>
-    </div>
+            </div>
+        </form>
+    </main>
 
     <!-- Admin Dashboard Logic -->
     <script src="scripts/adminDashboard.js" type="module"></script>
 
-    <!-- View Toggle Script -->
+    <!-- Clock Script -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const serviceSelect = document.getElementById("serviceSelect");
-            const sections = {
-                add: document.getElementById("addAccountForm"),
-                view: document.getElementById("viewAccounts"),
-                eventLog: document.getElementById("eventLog")
-            };
-
-            serviceSelect.addEventListener("change", (e) => {
-                const selected = e.target.value;
-                Object.values(sections).forEach(section => {
-                    if (section) section.style.display = "none";
-                });
-                if (sections[selected]) {
-                    sections[selected].style.display = "block";
-                }
-            });
-
-            // Optional: auto-load current time
             function updateClock() {
                 const now = new Date();
                 const options = {
