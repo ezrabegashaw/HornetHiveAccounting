@@ -1,80 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Journalize</title>
-  <link rel="stylesheet" href="main.css">
-  <link rel="stylesheet" href="journal.css">
+  <link rel="stylesheet" href="main.css" />
+  <link rel="stylesheet" href="journal.css" />
 </head>
 
 <body class="has-sidebar">
-
-<header class="topbar">
-  <div class="datetime" id="dateTime"></div>
-  <div class="user">
-    <img id="userAvatar" src="profile.png" alt="User">
-    <span id="userName"></span>
-  </div>
-</header>
-<script>
-  const name = localStorage.getItem('username') || 'User';
-  const el = document.getElementById('userName');
-  if (el) el.textContent = name;
-  function updateClock(){
-    const now = new Date();
-    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
-                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
-    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
-  }
-  updateClock(); setInterval(updateClock,1000);
-</script>
-
-<div class="app">
-
-<aside class="sidebar">
-  <div class="brand">
-    <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-  </div>
-  <ul class="nav">
-    <li><a href="Dashboard.html" >Dashboard</a></li>
-    <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-    <li><a href="#accounts">Accounts</a></li>
-    <li><a href="journal.html" aria-current="page">Journalize</a></li>
-    <li><a href="trial_balance.html">Trial Balance</a></li>
-    <li><a href="#income">Income Statement</a></li>
-    <li><a href="#balance">Balance Sheet</a></li>
-    <li><a href="#retained">Statement of Retained Earnings</a></li>
-  </ul>
-  <div class="sidebar-footer"><button class="btn">Logout</button></div>
-</aside>
-
-  <main class="main">
-    <div class="journalBody">
-      <div class="journal-card">
-        <h2>Journalize <button>+Add</button></h2>
-        <div class="form-actions">
-          <input placeholder="Search...">
-          <button>Search</button>
-        </div>
-        <div class="dateFilter form-actions">
-          <label>Start Date: <input type="date"></label>
-          <label>End Date: <input type="date"></label>
-          <button>Filter</button>
-        </div>
-        <div class="tabs">
-          <span>All</span> | <span>Approved</span> | <span>Pending</span> | <span>Rejected</span>
-        </div>
-        <hr>
-        <table>
-          <thead>
-            <tr><th>Type</th><th>Creator</th><th>Accounts</th><th>Debit</th><th>Credit</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- ===== Top Bar ===== -->
+  <header class="topbar">
+    <div class="datetime" id="dateTime"></div>
+    <div class="user">
+      <img id="userAvatar" src="profile.png" alt="User" />
+      <span id="userName"></span>
     </div>
-  </main>
-</div>
+  </header>
+
+  <script>
+    const name = localStorage.getItem("username") || "User";
+    const el = document.getElementById("userName");
+    if (el) el.textContent = name;
+
+    function updateClock() {
+      const now = new Date();
+      const options = {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      };
+      document.getElementById("dateTime").textContent = now.toLocaleString(undefined, options);
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+
+  <div class="app">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="HHAlogo.jpg" alt="HHA Logo" />
+        <span>HHA</span>
+      </div>
+      <ul class="nav">
+        <li><a href="Dashboard.html">Dashboard</a></li>
+        <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+        <li><a href="#accounts">Accounts</a></li>
+        <li><a href="journal.html" aria-current="page" class="active">Journalize</a></li>
+        <li><a href="trial_balance.html">Trial Balance</a></li>
+        <li><a href="#income">Income Statement</a></li>
+        <li><a href="#balance">Balance Sheet</a></li>
+        <li><a href="#retained">Statement of Retained Earnings</a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <button class="btn logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <!-- ===== Main Content ===== -->
+    <main class="main">
+      <div class="journalBody">
+        <div class="journal-card">
+          <div class="header-row">
+            <h2>Journal Entries</h2>
+            <button id="addEntryBtn" class="btn primary">+ Add Entry</button>
+          </div>
+
+          <!-- Filters -->
+          <div class="form-actions">
+            <input id="searchBox" placeholder="Search by account, type, or creator..." />
+            <button class="btn small">Search</button>
+          </div>
+
+          <div class="dateFilter form-actions">
+            <label>Start Date: <input type="date" id="startDate" /></label>
+            <label>End Date: <input type="date" id="endDate" /></label>
+            <button class="btn small">Filter</button>
+          </div>
+
+          <!-- Status Tabs -->
+          <div class="tabs">
+            <span class="tab active">All</span>
+            <span class="tab">Approved</span>
+            <span class="tab">Pending</span>
+            <span class="tab">Rejected</span>
+          </div>
+          <hr />
+
+          <!-- Journal Entries Table -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Creator</th>
+                  <th>Accounts</th>
+                  <th>Debit</th>
+                  <th>Credit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Entries will be injected here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== Modal for Adding Entry ===== -->
+  <div id="entryModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>New Journal Entry</h3>
+      <form id="journalForm">
+        <label>
+          Date:
+          <input type="date" id="entryDate" required />
+        </label>
+        <label>
+          Type:
+          <select id="entryType" required>
+            <option value="">Select Type</option>
+            <option value="adjusting">Adjusting</option>
+            <option value="closing">Closing</option>
+            <option value="reversing">Reversing</option>
+          </select>
+        </label>
+        <label>
+          Description:
+          <textarea id="entryDescription" placeholder="Enter description..." required></textarea>
+        </label>
+
+        <div class="account-lines">
+          <h4>Accounts</h4>
+          <div id="accountRows">
+            <div class="account-row">
+              <input placeholder="Account Name" class="account-name" />
+              <input placeholder="Debit" type="number" class="debit" />
+              <input placeholder="Credit" type="number" class="credit" />
+            </div>
+          </div>
+          <button type="button" class="btn small add-line">+ Add Line</button>
+        </div>
+
+        <div class="form-actions modal-buttons">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" class="btn secondary" id="closeModal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

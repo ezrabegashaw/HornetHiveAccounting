@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ledger</title>
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="ledger.css">
+</head>
+
+<body class="has-sidebar">
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+
+<script>
+  const name = localStorage.getItem('username') || 'User';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="#income">Income Statement</a></li>
+      <li><a href="#balance">Balance Sheet</a></li>
+      <li><a href="#retained">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="ledgerBody">
+      <div class="ledger-card">
+        <h2 id="ledgerTitle">Ledger - </h2>
+
+        <!-- Filter / Search -->
+        <div class="form-actions">
+          <input id="searchInput" type="text" placeholder="Search by description or amount">
+          <button id="searchBtn">Search</button>
+        </div>
+
+        <div class="dateFilter form-actions">
+          <label>Start Date: <input id="startDate" type="date"></label>
+          <label>End Date: <input id="endDate" type="date"></label>
+          <button id="filterBtn">Filter</button>
+        </div>
+
+        <hr>
+
+        <!-- Ledger Table -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Post Ref (PR)</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody">
+              <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Supabase & Auth -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+
+<script>
+  const db = window.supabaseClient;
+
+  // Get account_id from query string (?account_id=123)
+  const params = new URLSearchParams(window.location.search);
+  const accountId = params.get("account_id");
+
+  async function loadLedger() {
+    if (!accountId) {
+      document.getElementById('ledgerTableBody').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;color:red;">No account selected</td></tr>';
+      return;
+    }
+
+    // Fetch account info for title
+    const { data: accountInfo } = await db
+      .from('accounts')
+      .select('account_name')
+      .eq('id', accountId)
+      .single();
+
+    if (accountInfo) {
+      document.getElementById("ledgerTitle").textContent = `Ledger - ${accountInfo.account_name}`;
+    }
+
+    // Fetch all ledger entries for this account
+    const { data, error } = await db
+      .from('journal_lines')
+      .select(`
+        id,
+        date,
+        description,
+        debit,
+        credit,
+        balance,
+        journal_entries (id)
+      `)
+      .eq('account_id', accountId)
+      .order('date', { ascending: true });
+
+    renderLedger(data, error);
+  }
+
+  function renderLedger(data, error) {
+    const tbody = document.getElementById('ledgerTableBody');
+    tbody.innerHTML = '';
+
+    if (error) {
+      console.error(error);
+      tbody.innerHTML = `<tr><td colspan="6" style="color:red;text-align:center;">Error loading ledger</td></tr>`;
+      return;
+    }
+
+    if (!data || !data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No ledger entries found</td></tr>`;
+      return;
+    }
+
+    let runningBalance = 0;
+
+    data.forEach(entry => {
+      runningBalance += (entry.debit || 0) - (entry.credit || 0);
+      const row = document.createElement('tr');
+
+      row.innerHTML = `
+        <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
+        <td>${entry.description || ''}</td>
+        <td><a href="journal.html?entry_id=${entry.journal_entries?.id || entry.id}" class="link">PR-${entry.journal_entries?.id || entry.id}</a></td>
+        <td>${entry.debit ? entry.debit.toFixed(2) : ''}</td>
+        <td>${entry.credit ? entry.credit.toFixed(2) : ''}</td>
+        <td>${runningBalance.toFixed(2)}</td>
+      `;
+
+      tbody.appendChild(row);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", loadLedger);
+</script>
+</body>
+</html>

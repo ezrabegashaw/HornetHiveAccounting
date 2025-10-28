@@ -130,11 +130,15 @@
       return;
     }
 
-    data.forEach(acc => {
+        data.forEach(acc => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${acc.account_number}</td>
-        <td>${acc.account_name}</td>
+        <td>
+          <a href="ledger.html?account_id=${encodeURIComponent(acc.id)}" class="account-link">
+            ${acc.account_name}
+          </a>
+        </td>
         <td>${acc.account_category}</td>
         <td>${acc.normal_side}</td>
         <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
