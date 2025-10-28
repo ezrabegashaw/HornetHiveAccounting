@@ -10,13 +10,14 @@
 
 <body class="has-sidebar">
 
-<header class="topbar">
-  <div class="datetime" id="dateTime"></div>
-  <div class="user">
-    <img id="userAvatar" src="profile.png" alt="User">
-    <span id="userName"></span>
-  </div>
-</header>
+    <header class="topbar">
+        <div class="datetime" id="dateTime"></div>
+        <button class="btn" id="helpBtn" title="View help topics">Help</button>
+        <div class="user">
+            <img id="userAvatar" src="profile.png" alt="User">
+            <span id="userName"></span>
+        </div>
+    </header>
 <script>
   const name = localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
@@ -27,7 +28,12 @@
                       hour:'2-digit', minute:'2-digit', second:'2-digit' };
     document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
   }
-  updateClock(); setInterval(updateClock,1000);
+    updateClock(); setInterval(updateClock, 1000);
+
+    document.getElementById('helpBtn').addEventListener('click', () => {
+        window.open('help.html', '_blank');
+    });
+
 </script>
 
 <div class="app">

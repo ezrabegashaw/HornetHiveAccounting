@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Help - Hornet Hive Accounting</title>
+    <link rel="stylesheet" href="main.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="datetime" id="dateTime"></div>
+        <div class="user">
+            <img src="profile.png" alt="User" />
+            <span>Help Center</span>
+        </div>
+    </header>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const options = {
+                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            };
+            document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+        }
+        updateClock(); setInterval(updateClock, 1000);
+    </script>
+
+    <main class="main">
+        <div class="logo-container mb-3">
+            <img src="HHAlogo.jpg" alt="Hornet Hive Logo" class="logo" />
+        </div>
+
+        <section class="card">
+            <h2 class="mb-2">Help Center</h2>
+            <p class="mb-3">Welcome to Hornet Hive Accounting! Here's a guide to help you navigate the system.</p>
+
+            <h3 class="mb-2">Authentication & User Management</h3>
+            <ul class="mb-3">
+                <li>Creating and managing user accounts</li>
+                <li>Understanding roles: Admin, Manager, Accountant</li>
+                <li>Password requirements and reset instructions</li>
+            </ul>
+
+            <h3 class="mb-2">Chart of Accounts</h3>
+            <ul class="mb-3">
+                <li>Adding and editing accounts</li>
+                <li>Account number formatting rules</li>
+                <li>Filtering and searching by name, number, category</li>
+                <li>Viewing individual ledgers</li>
+            </ul>
+
+            <h3 class="mb-2">Journal Entries</h3>
+            <ul class="mb-3">
+                <li>How to journalize transactions</li>
+                <li>Linking entries to accounts</li>
+                <li>Viewing journal history</li>
+            </ul>
+
+            <h3 class="mb-2">Event Logs</h3>
+            <ul class="mb-3">
+                <li>Tracking changes made by users</li>
+                <li>Viewing before/after snapshots</li>
+                <li>Exporting logs for audit</li>
+            </ul>
+
+            <h3 class="mb-2">Troubleshooting & Tips</h3>
+            <ul class="mb-3">
+                <li>Fixing duplicate account errors</li>
+                <li>Understanding balance restrictions</li>
+                <li>Formatting monetary values</li>
+            </ul>
+
+            <p class="mb-3">For further assistance, contact your administrator or refer to onboarding documentation.</p>
+
+            <button class="button" onclick="window.location.href='AdminDashboard.html'" title="Return to Dashboard">Back to Dashboard</button>
+        </section>
+    </main>
+</body>
+</html>

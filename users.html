@@ -12,6 +12,7 @@
 
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
+    <button class="btn" id="helpBtn" title="View help topics">Help</button>
   <div class="user">
     <img id="userAvatar" src="profile.png" alt="User">
     <span id="userName"></span>
@@ -27,7 +28,13 @@
                       hour:'2-digit', minute:'2-digit', second:'2-digit' };
     document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
   }
-  updateClock(); setInterval(updateClock,1000);
+    updateClock(); setInterval(updateClock, 1000);
+
+    // Help button behavior
+    document.getElementById('helpBtn').addEventListener('click', () => {
+        window.open('usersHelp.html', '_blank');
+    });
+
 </script>
 
 <div class="app">
@@ -56,7 +63,6 @@
           <input id="searchInput" type="text" placeholder="Search by name">
           <button id="searchBtn">Search</button>
           <button id="queryUsers">View Pending Uers</button>
-          <button onclick="window.location.href='AdminDashBoard.html'"> Create New Account</button>
         </div>
     </div>
 
