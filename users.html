@@ -63,6 +63,7 @@
           <input id="searchInput" type="text" placeholder="Search by name">
           <button id="searchBtn">Search</button>
           <button id="queryUsers">View Pending Uers</button>
+          <button id='createNewUsers'>Create New User</button>
         </div>
     </div>
 
@@ -83,7 +84,7 @@
     </div>
 
     <!--Edit Pop-up Display-->
-    <div class="popup-overlay" id="editPopupOverlay"></div>
+    <div class="popup-overlay" id="popupOverlay"></div>
     <div class="popup" id="editPopup">
       <h3>Edit User</h3>
       <form id="editUserForm">
@@ -113,7 +114,6 @@
 
 
     <!--Pending Users Pop-up Display-->
-    <div class="popup-overlay" id="pendingUsersOverlay"></div>
     <div class="popup-pending" id="pendingPopup">
       <h3>Pending Users</h3>
       <div class="table-wrap">
@@ -129,7 +129,41 @@
           <tbody></tbody>
         </table>
       </div>
-    </div>    
+    </div>
+
+      <!--Creating New Users-->
+    <div class="popup" id="newPopup">
+      <h3>Create New Users</h3>
+      <hr>
+      <form id="newUserForm" onsubmit="return createNewUser(event)">
+        <label>Name:</label>
+        <input name="firstName" type="text" placeholder="First Name" required>
+        <input name="lastName" type="text" placeholder='Last Name' required>
+        <label>Email:</label>
+        <input name="addEmail" type="email" placeholder='Email' required>
+        <label>Address:</label>
+        <input name="address" type="text" placeholder="Address">
+        <Label>Birthday:</Label>
+        <input name="dob" type="date" required>
+        <label>Role:</label>
+        <select name ='role'>
+          <option value="Accountant">Accountant</option>
+          <option value="Manager">Manager</option>
+          <option value="Admin">Admin</option>
+        </select>
+        <lable>Password:</lable>
+        <input name="enterPassword" type="password" placeholder='Enter Password' required>
+        <input name="confirmPassword" tpye="password" placeholder='Confirm Password' required>
+      </form>
+
+      <p id="username">This text is where it gonna show your username</p>
+
+      <div class="popup-buttons">
+        <button id="sumbitButton" type="submit" form="newUserForm">Submit</button>
+        <button class='popup-cancel' id="closeButton">Cancel</button>
+
+      </div>
+    </div>
 
   </main>
 
@@ -199,7 +233,7 @@
       document.getElementById('editActive').checked = user.active;
       
       // Show the popup
-      document.getElementById('editPopupOverlay').style.display = 'block';
+      document.getElementById('popupOverlay').style.display = 'block';
       document.getElementById('editPopup').style.display = 'block';
 
       // Handle form submission
@@ -274,15 +308,15 @@
   }
 
   function closePopup() {
-    document.getElementById('editPopupOverlay').style.display = 'none';
+    document.getElementById('popupOverlay').style.display = 'none';
     document.getElementById('editPopup').style.display = 'none';
-    document.getElementById('pendingUsersOverlay').style.display = 'none';
     document.getElementById('pendingPopup').style.display = 'none';
+    document.getElementById('newPopup').style.display = 'none';
   }
 
-  document.getElementById('editPopupOverlay').onclick = closePopup;
+  document.getElementById('popupOverlay').onclick = closePopup;
   document.getElementById('cancelButton').onclick = closePopup;
-  document.getElementById('pendingUsersOverlay').onclick = closePopup;
+  document.getElementById('closeButton').onclick = closePopup;
     
   getUsers();
 
@@ -299,7 +333,7 @@
 
   document.getElementById('queryUsers').onclick = showPendingPopup;
   async function showPendingPopup() {
-    document.getElementById('pendingUsersOverlay').style.display = 'block';
+    document.getElementById('popupOverlay').style.display = 'block';
     document.getElementById('pendingPopup').style.display = 'block';
 
     //Prints users onto the table
@@ -370,6 +404,84 @@
     }
     showPendingPopup();
     return true; 
+  }
+    //New Users creation popup
+    document.getElementById('createNewUsers').onclick = openNewUser;
+    async function openNewUser() {
+      //Opens up new users popup
+      document.getElementById('popupOverlay').style.display = 'block';
+      document.getElementById('newPopup').style.display = 'block';
+
+      // initialize live username preview when opening
+      liveUsername();
+
+    }
+
+  //Handles submitting new user request
+  async function createNewUser(event) {
+    event.preventDefault();
+    const first = event.target.firstName.value;
+    const last = event.target.lastName.value;
+    const dob = event.target.dob.value; // yyyy-mm-dd
+    const usernameEl = document.getElementById('username');
+    // ensure username is generated before submitting
+    const username = usernameEl ? usernameEl.textContent.trim() : '';
+    console.log('Submitting new user', { first, last, dob, username });
+  }
+
+  function liveUsername() {
+    const form = document.getElementById('newUserForm');
+    if (!form) return;
+
+    const firstEl = form.querySelector('[name="firstName"]');
+    const lastEl = form.querySelector('[name="lastName"]');
+    const dobEl = form.querySelector('[name="dob"]');
+    const out = document.getElementById('username');
+
+    function build() {
+      const first = (firstEl && firstEl.value) ? firstEl.value.trim() : '';
+      const last = (lastEl && lastEl.value) ? lastEl.value.trim() : '';
+      const dob = (dobEl && dobEl.value) ? dobEl.value : '';
+
+      if (!first || !last || !dob) {
+        if (out) out.textContent = 'This text is where it gonna show your username';
+        return;
+      }
+
+      // take first letter of first name and full last name
+      const f = first.charAt(0).toLowerCase();
+      // sanitize last name: remove spaces and non-alphanumeric
+      const l = last.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // dob expected format YYYY-MM-DD -> extract month and day
+      const parts = dob.split('-');
+      let mmdd = '';
+      if (parts.length === 3) {
+        const mm = parts[1].padStart(2, '0');
+        const dd = parts[2].padStart(2, '0');
+        mmdd = `${mm}${dd}`;
+      }
+
+      const username = `${f}${l}${mmdd}`;
+      if (out) out.textContent = username;
+    }
+
+    // attach listeners once
+    if (firstEl && !firstEl._liveUsernameAttached) {
+      firstEl.addEventListener('input', build);
+      firstEl._liveUsernameAttached = true;
+    }
+    if (lastEl && !lastEl._liveUsernameAttached) {
+      lastEl.addEventListener('input', build);
+      lastEl._liveUsernameAttached = true;
+    }
+    if (dobEl && !dobEl._liveUsernameAttached) {
+      dobEl.addEventListener('change', build);
+      dobEl._liveUsernameAttached = true;
+    }
+
+    // initial build
+    build();
   }
 
 </script>
