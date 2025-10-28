@@ -130,12 +130,12 @@
       return;
     }
 
-        data.forEach(acc => {
+            data.forEach(acc => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${acc.account_number}</td>
         <td>
-          <a href="ledger.html?account_id=${encodeURIComponent(acc.id)}" class="account-link">
+          <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
             ${acc.account_name}
           </a>
         </td>

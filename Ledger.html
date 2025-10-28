@@ -112,7 +112,7 @@
     const { data: accountInfo } = await db
       .from('accounts')
       .select('account_name')
-      .eq('id', accountId)
+      .eq('account_id', accountId)
       .single();
 
     if (accountInfo) {
