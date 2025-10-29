@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ledger</title>
   <link rel="stylesheet" href="main.css">
+  <style>
+    /* small styles to match your example look */
+    .page-title {font-size: 2.25rem; font-weight:700; color:#15803d; margin:0 0 .5rem}
+    .toolbar {display:flex; justify-content:flex-end; gap:.5rem; margin:.25rem 0 1rem}
+    .toolbar input {padding:.45rem .6rem}
+    .ledger-card {background:#fff; border-radius:12px; padding:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .table-wrap table {width:100%; border-collapse:collapse}
+    th, td {padding:.65rem .6rem; border-top:1px solid #e5e7eb; text-align:left}
+    th {background:#f8fafc; font-weight:600}
+    .btn-back {margin-top:1rem; padding:.45rem .7rem; background:#0f172a; color:#fff; border-radius:8px}
+    .ref a {text-decoration:underline; color:#2563eb}
+    .money {text-align:right; white-space:nowrap}
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -50,33 +63,23 @@
   <main class="main">
     <div class="ledgerBody">
       <div class="ledger-card">
-        <h2 id="ledgerTitle">Ledger - </h2>
+        <h1 id="ledgerTitle" class="page-title">—</h1>
 
-        <!-- Filter / Search -->
-        <div class="form-actions">
-          <input id="searchInput" type="text" placeholder="Search by description or amount">
-          <button id="searchBtn">Search</button>
+        <div class="toolbar">
+          <input id="searchInput" type="text" placeholder="Search description or amount">
+          <button id="searchBtn" class="btn">Search</button>
         </div>
 
-        <div class="dateFilter form-actions">
-          <label>Start Date: <input id="startDate" type="date"></label>
-          <label>End Date: <input id="endDate" type="date"></label>
-          <button id="filterBtn">Filter</button>
-        </div>
-
-        <hr>
-
-        <!-- Ledger Table -->
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Date</th>
+                <th style="min-width:110px">Date</th>
+                <th>Reference No.</th>
                 <th>Description</th>
-                <th>Post Ref (PR)</th>
-                <th>Debit</th>
-                <th>Credit</th>
-                <th>Balance</th>
+                <th class="money">Debit</th>
+                <th class="money">Credit</th>
+                <th class="money">Balance</th>
               </tr>
             </thead>
             <tbody id="ledgerTableBody">
@@ -84,6 +87,8 @@
             </tbody>
           </table>
         </div>
+
+        <a href="ChartOfAccounts.html" class="btn-back">&lt; Back to Accounts</a>
       </div>
     </div>
   </main>
@@ -96,18 +101,9 @@
 <script>
   const db = window.supabaseClient;
 
-  // Get account_id from URL (?account_id=123)
+  // URL params: ?account_id=123
   const params = new URLSearchParams(window.location.search);
   const accountId = params.get("account_id");
-
-  // Helper to safely read joined journal entry date/id
-  function getJournalEntryField(entry, fieldName) {
-    if (!entry) return null;
-    // If joined value comes back as an array (common), take [0]
-    const je = Array.isArray(entry.journal_entries) ? entry.journal_entries[0] : entry.journal_entries;
-    if (!je) return null;
-    return je[fieldName] ?? null;
-  }
 
   async function loadLedger() {
     const tbody = document.getElementById("ledgerTableBody");
@@ -118,100 +114,100 @@
       return;
     }
 
-    // Fetch account info (name + normal_side)
-    const { data: accountInfo, error: accErr } = await db
+    // Fetch account info
+    const { data: acc, error: accErr } = await db
       .from("accounts")
-      .select("account_name, normal_side")
+      .select("account_name, account_number, normal_side")
       .eq("account_id", accountId)
-      .single();
+      .maybeSingle();
 
-    if (accErr) {
-      console.error("Error loading account info:", accErr);
-      document.getElementById("ledgerTitle").textContent = "Ledger - (error)";
-    } else if (accountInfo) {
-      document.getElementById("ledgerTitle").textContent = `Ledger - ${accountInfo.account_name}`;
+    if (accErr || !acc) {
+      console.error("Error loading account:", accErr);
+      document.getElementById("ledgerTitle").textContent = "Ledger";
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Failed to load account</td></tr>`;
+      return;
     }
 
-    // Build query: select journal_lines and join parent journal_entries (entry_id, date, status)
-    // Note: use journal_entries!inner or journal_entries (depends on whether FK mapping exists).
+    // Title like "100 - Cash"
+    document.getElementById("ledgerTitle").textContent = `${acc.account_number} - ${acc.account_name}`;
+
+    // Fetch ledger rows for this account_number
+    const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+
     const { data, error } = await db
-      .from("journal_lines")
-      .select(`
-        line_id,
-        journal_entry_id,
-        created_at,
-        description,
-        debit,
-        credit,
-        journal_entries (
-          entry_id,
-          date,
-          status
-        )
-      `)
-      .eq("account_id", accountId)
-      .order("created_at", { ascending: true }); // order by line creation; stable and valid
-
-    // Pass normal_side (default to 'debit') to renderer
-    const normalSide = (accountInfo && accountInfo.normal_side) ? accountInfo.normal_side.toString().toLowerCase() : "debit";
-    renderLedger(data, error, normalSide);
-  }
-
-  function renderLedger(data, error, normalSide = "debit") {
-    const tbody = document.getElementById('ledgerTableBody');
-    tbody.innerHTML = '';
+      .from("ledger")
+      .select("journal_entry_id, date, description, debit, credit, balance")
+      .eq("account_number", acc.account_number)
+      .order("date", { ascending: true })
+      .order("created_at", { ascending: true });
 
     if (error) {
       console.error("Ledger load error:", error);
-      tbody.innerHTML = `<tr><td colspan="6" style="color:red;text-align:center;">Error loading ledger</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Error loading ledger</td></tr>`;
       return;
     }
 
-    if (!data || !data.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No ledger entries found</td></tr>`;
-      return;
+    // client-side search
+    let rows = data || [];
+    if (q) {
+      rows = rows.filter(r => {
+        const desc = (r.description || "").toLowerCase();
+        const dAmt = Number(r.debit || 0).toFixed(2);
+        const cAmt = Number(r.credit || 0).toFixed(2);
+        return desc.includes(q) || dAmt.includes(q) || cAmt.includes(q);
+      });
     }
 
-    let runningBalance = 0;
+    // Render
+tbody.innerHTML = "";
+if (!rows.length) {
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No entries</td></tr>`;
+  return;
+}
 
-    data.forEach(entry => {
-      // Determine the display date:
-      // prefer journal_entries.date (parent), fallback to created_at (line)
-      const parent = Array.isArray(entry.journal_entries) ? entry.journal_entries[0] : entry.journal_entries;
-      const entryDate = parent?.date ?? entry.created_at ?? null;
-      const displayDate = entryDate ? new Date(entryDate).toLocaleDateString() : '';
+// Recompute running balance from 0 (or use initial balance if you prefer)
+const isDebitNormal = (acc.normal_side || "").toLowerCase() === "debit";
+let running = 0; // or: Number(acc.initial_balance || 0);
 
-      // Determine parent entry id for PR link
-      const parentId = parent?.entry_id ?? entry.journal_entry_id ?? '';
+// sort strictly by (date, created_at) to be safe
+rows.sort((a,b) => {
+  const da = new Date(a.date || a.created_at || 0).getTime();
+  const db = new Date(b.date || b.created_at || 0).getTime();
+  if (da !== db) return da - db;
+  return 0;
+});
 
-      // Calculate running balance using account normal side
-      if (normalSide === 'credit') {
-        runningBalance += (Number(entry.credit || 0)) - (Number(entry.debit || 0));
-      } else {
-        runningBalance += (Number(entry.debit || 0)) - (Number(entry.credit || 0));
-      }
+rows.forEach(r => {
+  const dateStr = r.date ? new Date(r.date).toLocaleDateString() : "";
+  const debitVal  = Number(r.debit  || 0);
+  const creditVal = Number(r.credit || 0);
 
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${displayDate}</td>
-        <td>${entry.description || ''}</td>
-        <td>
-          ${parentId ? `<a href="journal.html?entry_id=${parentId}" class="link">PR-${parentId}</a>` : ''}
-        </td>
-        <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
-        <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
-        <td>${runningBalance.toFixed(2)}</td>
-      `;
-      tbody.appendChild(row);
-    });
+  // delta based on normal side
+  const delta = isDebitNormal
+    ? (debitVal - creditVal)   // debit-normal: debits increase, credits decrease
+    : (creditVal - debitVal);  // credit-normal: credits increase, debits decrease
+
+  running = Number((running + delta).toFixed(2));
+
+  const refHtml = r.journal_entry_id
+    ? `<a class="ref" href="journal.html?entry_id=${r.journal_entry_id}">${r.journal_entry_id}</a>`
+    : "";
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${dateStr}</td>
+    <td class="ref">${refHtml}</td>
+    <td>${r.description || ""}</td>
+    <td class="money">${debitVal ? debitVal.toFixed(2) : ""}</td>
+    <td class="money">${creditVal ? creditVal.toFixed(2) : ""}</td>
+    <td class="money">${running.toFixed(2)}</td>
+  `;
+  tbody.appendChild(tr);
+});
+
   }
 
-  // Bind filter/search buttons if they exist
-  const filterBtn = document.getElementById("filterBtn");
-  const searchBtn = document.getElementById("searchBtn");
-  if (filterBtn) filterBtn.addEventListener("click", loadLedger);
-  if (searchBtn) searchBtn.addEventListener("click", loadLedger);
-
+  document.getElementById("searchBtn")?.addEventListener("click", loadLedger);
   document.addEventListener("DOMContentLoaded", loadLedger);
 </script>
 </body>
