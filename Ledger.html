@@ -8,8 +8,9 @@
   <style>
     /* small styles to match your example look */
     .page-title {font-size: 2.25rem; font-weight:700; color:#15803d; margin:0 0 .5rem}
-    .toolbar {display:flex; justify-content:flex-end; gap:.5rem; margin:.25rem 0 1rem}
-    .toolbar input {padding:.45rem .6rem}
+    .toolbar {display:flex; flex-wrap:wrap; justify-content:space-between; gap:.75rem; margin:.25rem 0 1rem}
+    .toolbar .left, .toolbar .right {display:flex; gap:.5rem; align-items:center; flex-wrap:wrap}
+    .toolbar input, .toolbar select, .toolbar button {padding:.45rem .6rem; border:1px solid #e5e7eb; border-radius:8px}
     .ledger-card {background:#fff; border-radius:12px; padding:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08)}
     .table-wrap table {width:100%; border-collapse:collapse}
     th, td {padding:.65rem .6rem; border-top:1px solid #e5e7eb; text-align:left}
@@ -17,6 +18,7 @@
     .btn-back {margin-top:1rem; padding:.45rem .7rem; background:#0f172a; color:#fff; border-radius:8px}
     .ref a {text-decoration:underline; color:#2563eb}
     .money {text-align:right; white-space:nowrap}
+    .muted {color:#6b7280}
   </style>
 </head>
 
@@ -65,9 +67,30 @@
       <div class="ledger-card">
         <h1 id="ledgerTitle" class="page-title">—</h1>
 
+        <!-- Filters & Search -->
         <div class="toolbar">
-          <input id="searchInput" type="text" placeholder="Search description or amount">
-          <button id="searchBtn" class="btn">Search</button>
+          <div class="left">
+            <label class="muted">From
+              <input id="startDate" type="date">
+            </label>
+            <label class="muted">To
+              <input id="endDate" type="date">
+            </label>
+            <button id="applyFilters" class="btn">Apply</button>
+            <button id="clearFilters" class="btn">Clear</button>
+          </div>
+
+          <div class="right">
+            <input id="searchInput" type="text" placeholder="Search description or amount (e.g., 250)">
+            <button id="searchBtn" class="btn">Search</button>
+          </div>
+        </div>
+
+        <!-- Quick jump to another account by name/number -->
+        <div class="toolbar" style="justify-content:flex-end">
+          <input id="accountQuery" list="accountsList" type="text" placeholder="Go to account (name or number)">
+          <datalist id="accountsList"></datalist>
+          <button id="gotoAccountBtn" class="btn">Go</button>
         </div>
 
         <div class="table-wrap">
@@ -105,6 +128,59 @@
   const params = new URLSearchParams(window.location.search);
   const accountId = params.get("account_id");
 
+  // Keep a cached list of accounts for quick jump
+  let _accountsIndex = [];
+
+  async function buildAccountsIndex() {
+    const { data, error } = await db
+      .from('accounts')
+      .select('account_id, account_name, account_number')
+      .eq('is_active', true)
+      .order('account_number');
+
+    if (error) { console.warn('accounts index error:', error.message); return; }
+
+    _accountsIndex = data || [];
+
+    // Populate datalist
+    const dl = document.getElementById('accountsList');
+    dl.innerHTML = '';
+    _accountsIndex.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = `${a.account_number} - ${a.account_name}`;
+      dl.appendChild(opt);
+    });
+  }
+
+  function resolveAccountFromQuery(q) {
+    if (!q) return null;
+    const s = q.trim().toLowerCase();
+    if (!s) return null;
+
+    // Exact number match first
+    const exactNum = _accountsIndex.find(a => String(a.account_number) === s);
+    if (exactNum) return exactNum;
+
+    // Exact "123 - Name" or exact name
+    const exactDisp = _accountsIndex.find(a => `${a.account_number} - ${a.account_name}`.toLowerCase() === s);
+    if (exactDisp) return exactDisp;
+
+    const exactName = _accountsIndex.find(a => a.account_name.toLowerCase() === s);
+    if (exactName) return exactName;
+
+    // Fuzzy: name contains / number contains
+    const fuzzy = _accountsIndex.filter(a =>
+      a.account_name.toLowerCase().includes(s) || String(a.account_number).includes(s)
+    );
+    if (fuzzy.length === 1) return fuzzy[0];
+    if (fuzzy.length > 1) {
+      // prefer startsWith name
+      const starts = fuzzy.find(a => a.account_name.toLowerCase().startsWith(s));
+      return starts || fuzzy[0];
+    }
+    return null;
+  }
+
   async function loadLedger() {
     const tbody = document.getElementById("ledgerTableBody");
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading...</td></tr>`;
@@ -114,10 +190,10 @@
       return;
     }
 
-    // Fetch account info
+    // Fetch account info (+ initial_balance for starting point)
     const { data: acc, error: accErr } = await db
       .from("accounts")
-      .select("account_name, account_number, normal_side")
+      .select("account_name, account_number, normal_side, initial_balance")
       .eq("account_id", accountId)
       .maybeSingle();
 
@@ -131,15 +207,22 @@
     // Title like "100 - Cash"
     document.getElementById("ledgerTitle").textContent = `${acc.account_number} - ${acc.account_name}`;
 
-    // Fetch ledger rows for this account_number
-    const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
-
-    const { data, error } = await db
+    // Build base query for this account_number
+    let query = db
       .from("ledger")
-      .select("journal_entry_id, date, description, debit, credit, balance")
-      .eq("account_number", acc.account_number)
-      .order("date", { ascending: true })
-      .order("created_at", { ascending: true });
+      .select("journal_entry_id, date, created_at, description, debit, credit")
+      .eq("account_number", acc.account_number);
+
+    // Date filters
+    const startDate = document.getElementById('startDate').value || null;
+    const endDate   = document.getElementById('endDate').value   || null;
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate)   query = query.lte('date', endDate);
+
+    // Order stable by (date, created_at)
+    query = query.order("date", { ascending: true }).order("created_at", { ascending: true });
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Ledger load error:", error);
@@ -147,68 +230,93 @@
       return;
     }
 
-    // client-side search
+    // Text/amount search (client-side)
+    const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
     let rows = data || [];
     if (q) {
       rows = rows.filter(r => {
         const desc = (r.description || "").toLowerCase();
-        const dAmt = Number(r.debit || 0).toFixed(2);
+        const dAmt = Number(r.debit  || 0).toFixed(2);
         const cAmt = Number(r.credit || 0).toFixed(2);
         return desc.includes(q) || dAmt.includes(q) || cAmt.includes(q);
       });
     }
 
     // Render
-tbody.innerHTML = "";
-if (!rows.length) {
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No entries</td></tr>`;
-  return;
-}
+    tbody.innerHTML = "";
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No entries</td></tr>`;
+      return;
+    }
 
-// Recompute running balance from 0 (or use initial balance if you prefer)
-const isDebitNormal = (acc.normal_side || "").toLowerCase() === "debit";
-let running = 0; // or: Number(acc.initial_balance || 0);
+    // Running balance starts from initial balance (recommended)
+    const isDebitNormal = (acc.normal_side || "").toLowerCase() === "debit";
+    let running = Number(acc.initial_balance || 0);
 
-// sort strictly by (date, created_at) to be safe
-rows.sort((a,b) => {
-  const da = new Date(a.date || a.created_at || 0).getTime();
-  const db = new Date(b.date || b.created_at || 0).getTime();
-  if (da !== db) return da - db;
-  return 0;
-});
+    // Ensure sort (safety)
+    rows.sort((a,b) => {
+      const da = new Date(a.date || a.created_at || 0).getTime();
+      const db = new Date(b.date || b.created_at || 0).getTime();
+      if (da !== db) return da - db;
+      return 0;
+    });
 
-rows.forEach(r => {
-  const dateStr = r.date ? new Date(r.date).toLocaleDateString() : "";
-  const debitVal  = Number(r.debit  || 0);
-  const creditVal = Number(r.credit || 0);
+    rows.forEach(r => {
+      const dateStr   = r.date ? new Date(r.date).toLocaleDateString() : "";
+      const debitVal  = Number(r.debit  || 0);
+      const creditVal = Number(r.credit || 0);
 
-  // delta based on normal side
-  const delta = isDebitNormal
-    ? (debitVal - creditVal)   // debit-normal: debits increase, credits decrease
-    : (creditVal - debitVal);  // credit-normal: credits increase, debits decrease
+      // delta based on normal side
+      const delta = isDebitNormal
+        ? (debitVal - creditVal)   // debit-normal: debits increase, credits decrease
+        : (creditVal - debitVal);  // credit-normal: credits increase, debits decrease
 
-  running = Number((running + delta).toFixed(2));
+      running = Number((running + delta).toFixed(2));
 
-  const refHtml = r.journal_entry_id
-    ? `<a class="ref" href="journal.html?entry_id=${r.journal_entry_id}">${r.journal_entry_id}</a>`
-    : "";
+      const refHtml = r.journal_entry_id
+        ? `<a class="ref" href="journal.html?entry_id=${r.journal_entry_id}">${r.journal_entry_id}</a>`
+        : "";
 
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${dateStr}</td>
-    <td class="ref">${refHtml}</td>
-    <td>${r.description || ""}</td>
-    <td class="money">${debitVal ? debitVal.toFixed(2) : ""}</td>
-    <td class="money">${creditVal ? creditVal.toFixed(2) : ""}</td>
-    <td class="money">${running.toFixed(2)}</td>
-  `;
-  tbody.appendChild(tr);
-});
-
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${dateStr}</td>
+        <td class="ref">${refHtml}</td>
+        <td>${r.description || ""}</td>
+        <td class="money">${debitVal  ? debitVal.toFixed(2)  : ""}</td>
+        <td class="money">${creditVal ? creditVal.toFixed(2) : ""}</td>
+        <td class="money">${running.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
 
+  // Apply / Clear filters
+  document.getElementById("applyFilters")?.addEventListener("click", loadLedger);
+  document.getElementById("clearFilters")?.addEventListener("click", () => {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value   = '';
+    document.getElementById('searchInput').value = '';
+    loadLedger();
+  });
+
+  // Description/amount search
   document.getElementById("searchBtn")?.addEventListener("click", loadLedger);
-  document.addEventListener("DOMContentLoaded", loadLedger);
+
+  // Go to another account by name/number
+  document.getElementById("gotoAccountBtn")?.addEventListener("click", () => {
+    const q = document.getElementById('accountQuery').value || '';
+    const match = resolveAccountFromQuery(q);
+    if (!match) return alert('No matching account found.');
+    // Navigate to that account’s ledger
+    const url = new URL(window.location.href);
+    url.searchParams.set('account_id', match.account_id);
+    window.location.href = url.toString();
+  });
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await buildAccountsIndex(); // populate datalist
+    await loadLedger();         // load current account ledger
+  });
 </script>
 </body>
 </html>
