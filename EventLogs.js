@@ -44,7 +44,6 @@ function pillClass(action) {
 
 function pickFields(obj) {
   if (!obj) return null;
-  // Only fields you care to show in the “snapshot”
   const {
     account_number, account_name, account_category, account_subcategory,
     normal_side, statement_type, initial_balance, balance, account_order,
@@ -110,7 +109,6 @@ function niceKey(k) {
 
 // ------- Fetch & Filter -------
 async function fetchEvents() {
-  // Pull a reasonable window; you can increase if needed
   const { data, error } = await db
     .from('eventLog')
     .select('*')
@@ -131,15 +129,12 @@ function applyFilters(rows) {
   const to = toEl.value ? new Date(toEl.value + 'T23:59:59') : null;
 
   return rows.filter(r => {
-    // Action filter
     if (action && r.action !== action) return false;
 
-    // Date range (timestamp)
     const t = r.timestamp ? new Date(r.timestamp) : null;
     if (from && t && t < from) return false;
     if (to && t && t > to) return false;
 
-    // Text search on account_number / account_name (in before or after)
     if (q) {
       let hit = false;
       try {
@@ -167,6 +162,7 @@ function renderPage() {
   logsEl.innerHTML = '';
   if (!slice.length) {
     logsEl.innerHTML = `<div class="no-results">No matching events.</div>`;
+    return;
   }
 
   slice.forEach(row => {
@@ -180,22 +176,15 @@ function renderPage() {
 
     const card = document.createElement('div');
     card.className = 'log-card';
+
     card.innerHTML = `
       <div class="log-meta">
         <span class="${pillClass(row.action)}">${row.action || 'event'}</span>
         <span class="pill">User ID: ${row.userId ?? 'N/A'}</span>
         <span class="pill">${fmtDateTime(row.timestamp)}</span>
       </div>
-      <div class="snapshots">
-        <div class="snapshot">
-          <h4>Before</h4>
-          <div class="kv before"></div>
-        </div>
-        <div class="snapshot">
-          <h4>After</h4>
-          <div class="kv after"></div>
-        </div>
-      </div>
+      <div class="snapshot before"></div>
+      <div class="snapshot after"></div>
     `;
 
     renderKV(card.querySelector('.before'), beforePicked, changed);

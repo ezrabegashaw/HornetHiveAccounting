@@ -86,36 +86,23 @@
   const db = window.supabaseClient;
 
   async function loadAccounts(searchTerm = "") {
-    // base query: only active accounts
-    let query = db.from('accounts')
+    // Always read from the view so we get computed_balance
+    let query = db.from('v_account_balances')
       .select('*')
-      .eq('is_active', true)
       .order('account_number', { ascending: true });
 
     if (searchTerm) {
-      // Simple client-side filter fallback: fetch and filter.
-      // If you have a text index, replace with ilike or FTS.
-      const { data, error } = await db
-        .from('accounts')
+      query = db.from('v_account_balances')
         .select('*')
-        .eq('is_active', true)
+        .or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`)
         .order('account_number', { ascending: true });
-
-      renderAccounts(
-        error ? [] : data.filter(a =>
-          (a.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (a.account_number || '').toString().includes(searchTerm)
-        ),
-        error
-      );
-      return;
     }
 
     const { data, error } = await query;
     renderAccounts(data, error);
   }
 
-  function renderAccounts(data, error) {
+  async function renderAccounts(data, error) {
     const tbody = document.getElementById('accountTableBody');
     tbody.innerHTML = '';
 
@@ -130,7 +117,7 @@
       return;
     }
 
-            data.forEach(acc => {
+    data.forEach(acc => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${acc.account_number}</td>
@@ -139,9 +126,9 @@
             ${acc.account_name}
           </a>
         </td>
-        <td>${acc.account_category}</td>
-        <td>${acc.normal_side}</td>
-        <td>${Number(acc.balance ?? acc.initial_balance ?? 0).toFixed(2)}</td>
+        <td>${acc.account_category || ''}</td>
+        <td>${acc.normal_side || ''}</td>
+        <td>${Number(acc.computed_balance ?? 0).toFixed(2)}</td>
         <td>${acc.user_id || 'N/A'}</td>
         <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
         <td>${acc.comment || ''}</td>
@@ -161,7 +148,7 @@
       if (e.key === 'Enter') loadAccounts(searchInput.value.trim());
     });
 
-    // Load calendar fragment and execute its <script> tags
+    // (Optional) Load calendar fragment and execute its <script> tags
     fetch('Calendar.html')
       .then(res => res.text())
       .then(html => {
@@ -176,5 +163,6 @@
       });
   });
 </script>
+
 </body>
 </html>
