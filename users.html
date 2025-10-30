@@ -51,7 +51,7 @@
       <li><a href="Users.html">Users</a></li>
       <li><a href="EventLogs.html">Event Logs</a></li>
     </ul>
-    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
   </aside>
 
 
@@ -318,7 +318,16 @@
   document.getElementById('cancelButton').onclick = closePopup;
   document.getElementById('closeButton').onclick = closePopup;
     
-  getUsers();
+    getUsers();
+
+    // Logout functionality
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      try { 
+        if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+      } catch(e){}
+      localStorage.removeItem('username');
+      location.href = 'HornetHiveLogin.html';
+    });
 
   // Wire Save button to submit the edit form
   const saveBtn = document.getElementById('saveButton');

@@ -58,7 +58,7 @@
       <li><a href="Users.html">Users</a></li>
       <li><a href="EventLogs.html">Event Logs</a></li>
     </ul>
-    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
   </aside>
 
   <main class="main">
@@ -179,6 +179,15 @@
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
+
+  // Logout functionality
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { 
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
 </script>
 
 <!-- Page logic -->

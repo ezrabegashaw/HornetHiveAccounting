@@ -44,7 +44,7 @@
       <li><a href="#balance">Balance Sheet</a></li>
       <li><a href="#retained">Statement of Retained Earnings</a></li>
     </ul>
-    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
   </aside>
 
   <main class="main">
@@ -213,6 +213,15 @@
   if (searchBtn) searchBtn.addEventListener("click", loadLedger);
 
   document.addEventListener("DOMContentLoaded", loadLedger);
+
+  // Logout functionality
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { 
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
 </script>
 </body>
 </html>
