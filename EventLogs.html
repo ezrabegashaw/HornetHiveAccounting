@@ -7,29 +7,111 @@
   <link rel="stylesheet" href="main.css"/>
 
   <style>
-    /* Minimal styles that won't fight your main.css */
-    .toolbar {display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem}
-    .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select {padding:.4rem .6rem}
-    .logs-wrap {display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:1rem}
-    @media (min-width: 900px) {.logs-wrap {grid-template-columns:repeat(2,minmax(0,1fr));}}
-    .log-card {background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:1rem; display:flex; flex-direction:column; gap:.75rem}
-    .log-meta {display:flex; flex-wrap:wrap; gap:.75rem; font-size:.9rem; color:#333}
-    .pill {padding:.2rem .5rem; border-radius:999px; background:#f1f5f9; font-weight:600}
-    .pill.add {background:#e6ffed}
-    .pill.update {background:#fff4e5}
-    .pill.deactivate {background:#ffe5e5}
-    .snapshots {display:grid; grid-template-columns:1fr 1fr; gap:.75rem}
-    .snapshot {border:1px solid #e5e7eb; border-radius:10px; padding:.75rem; background:#fafafa}
-    .snapshot h4 {margin:.1rem 0 .5rem 0; font-size:.95rem}
-    .kv {display:grid; grid-template-columns: 160px 1fr; gap:.25rem .5rem; font-size:.92rem}
-    .kv .k {color:#555}
-    .kv .v {font-weight:600}
-    .changed {outline:2px solid #f59e0b; background:#fff7ed; border-radius:.4rem; padding:.05rem .25rem}
-    .empty {color:#9ca3af; font-style:italic}
-    .no-results {text-align:center; color:#666; padding:2rem 1rem}
-    .paginate {display:flex; justify-content:center; gap:.5rem; margin-top:1rem}
-    .paginate button {padding:.4rem .7rem}
-    .brand img {width:28px; height:28px; object-fit:contain; margin-right:.35rem}
+    /* ---- Minimal, horizontal-row event log styling ---- */
+
+    :root{
+      --line:#e5e7eb;      /* borders */
+      --muted:#6b7280;     /* labels */
+      --bg:#ffffff;        /* row background */
+      --bg-alt:#fafafa;    /* hover / zebra */
+      --pill:#111827;      /* pill text */
+      --pill-bg:#f3f4f6;   /* pill bg */
+      --accent:#0ea5a6;    /* tiny accents */
+      --add:#16a34a;       /* add color */
+      --upd:#f59e0b;       /* update color */
+      --deact:#ef4444;     /* deactivate color */
+    }
+
+    .toolbar{
+      display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem
+    }
+    .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select, .toolbar button{
+      padding:.45rem .6rem; border:1px solid var(--line); border-radius:8px; background:#fff;
+    }
+    .toolbar button{ cursor:pointer }
+
+    /* Header row describing columns */
+    .logs-head{
+      display:grid;
+      grid-template-columns: 240px 1fr 1fr;
+      gap:1rem;
+      padding:.5rem .25rem .6rem;
+      border-bottom:1px solid var(--line);
+      color:var(--muted);
+      font-size:.9rem;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+    }
+
+    /* Container for rows */
+    #logs{ display:block; }
+
+    /* Each log line (horizontal row) */
+    .log-card{
+      display:grid;
+      grid-template-columns: 240px 1fr 1fr;
+      gap:1rem;
+      padding:1rem .25rem;
+      border-bottom:1px solid var(--line);
+      background:var(--bg);
+      transition:background-color .15s ease;
+    }
+    .log-card:hover{ background:var(--bg-alt); }
+
+    /* Left meta column */
+    .log-meta{ display:flex; flex-direction:column; gap:.35rem; font-size:.95rem; }
+    .log-meta .pill{
+      display:inline-block;
+      padding:.2rem .5rem;
+      border-radius:999px;
+      background:var(--pill-bg);
+      color:var(--pill);
+      font-weight:600;
+      font-size:.8rem;
+      width:max-content;
+    }
+    .log-meta .pill.add{ color:var(--add); background:color-mix(in srgb, var(--add) 10%, #fff) }
+    .log-meta .pill.update{ color:var(--upd); background:color-mix(in srgb, var(--upd) 12%, #fff) }
+    .log-meta .pill.deactivate{ color:var(--deact); background:color-mix(in srgb, var(--deact) 10%, #fff) }
+    .meta-line{ color:var(--muted); font-size:.9rem }
+
+    /* Snapshot columns */
+    .snapshot{ background:transparent; border:0; padding:0; }
+    .snapshot h4{ display:none } /* we already have column headers above */
+
+    .kv{
+      display:grid;
+      grid-template-columns: 150px 1fr;
+      gap:.3rem .75rem;
+      font-size:.95rem;
+    }
+    .kv .k{ color:var(--muted); }
+    .kv .v{ font-weight:600; }
+    .kv .v.changed{
+      background:color-mix(in srgb, var(--upd) 8%, #fff);
+      outline:1px dashed color-mix(in srgb, var(--upd) 45%, #0000);
+      border-radius:6px; padding:.05rem .3rem;
+    }
+    .empty{ color:#9ca3af; font-style:italic }
+
+    /* No results */
+    .no-results{ text-align:center; color:#666; padding:2rem 1rem }
+
+    /* Pager */
+    .paginate{ display:flex; justify-content:center; gap:.5rem; margin-top:1rem }
+    .paginate button{
+      padding:.45rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer;
+    }
+
+    /* Responsive: stack columns */
+    @media (max-width: 900px){
+      .logs-head{ display:none; }
+      .log-card{
+        grid-template-columns: 1fr;
+        gap:.5rem;
+      }
+      .kv{ grid-template-columns: 120px 1fr; }
+    }
   </style>
 </head>
 
@@ -88,7 +170,15 @@
       </div>
     </div>
 
-    <div id="logs" class="logs-wrap">
+    <!-- Column headers for the horizontal layout -->
+    <div class="logs-head">
+      <div>Action / User / Time</div>
+      <div>Before</div>
+      <div>After</div>
+    </div>
+
+    <!-- Logs (rendered by eventLogs.js) -->
+    <div id="logs">
       <div class="no-results">Loading…</div>
     </div>
 

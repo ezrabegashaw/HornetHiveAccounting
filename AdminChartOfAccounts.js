@@ -62,11 +62,19 @@ async function logEvent(action, before, after) {
 
 // ---------- Load Accounts ----------
 export async function loadAccounts(searchTerm = "") {
-  let query = db.from('accounts').select('*').eq('is_active', true);
+  // Query the view so we get computed_balance
+  let base = db.from('v_account_balances')
+    .select('*')
+    .order('account_number', { ascending: true });
+
   if (searchTerm) {
-    query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
+    base = db.from('v_account_balances')
+      .select('*')
+      .or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`)
+      .order('account_number', { ascending: true });
   }
-  const { data, error } = await query.order('account_number', { ascending: true });
+
+  const { data, error } = await base;
 
   tableBody.innerHTML = '';
   if (error) {
@@ -86,7 +94,7 @@ export async function loadAccounts(searchTerm = "") {
       <td><span class="ledger-link" data-num="${acc.account_number}" data-name="${acc.account_name}">${acc.account_name}</span></td>
       <td>${acc.account_category ?? ''}</td>
       <td>${acc.normal_side ?? ''}</td>
-      <td>${asMoney(acc.balance ?? acc.initial_balance ?? 0)}</td>
+      <td>${Number(acc.computed_balance ?? 0).toFixed(2)}</td>
       <td>${acc.user_id ?? 'N/A'}</td>
       <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
       <td>${acc.comment || ''}</td>
@@ -94,6 +102,7 @@ export async function loadAccounts(searchTerm = "") {
     tableBody.appendChild(tr);
   });
 }
+
 
 // ---------- Ledger ----------
 async function openLedger(accountNumber, accountName) {
