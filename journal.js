@@ -343,6 +343,9 @@ async function loadJournalEntries(showAll) {
 // -------------------------
 // PR deep-link: show ONLY the single journal
 // -------------------------
+// -------------------------
+// PR deep-link: show ONLY the single journal
+// -------------------------
 async function renderJournalDetailOnly(entryId) {
   // Remove the “Submitted Journal Entries” section & the compose buttons
   document.getElementById("submittedSection")?.remove();
@@ -352,6 +355,27 @@ async function renderJournalDetailOnly(entryId) {
   const topTitle = document.getElementById("journalTopTitle");
   if (topTitle) topTitle.textContent = `Journal Entry #${entryId}`;
   document.title = `Journal Entry #${entryId}`;
+
+  // Show & wire up Back button
+  const backBtn = document.getElementById("backToLedgerBtn");
+  if (backBtn) {
+    backBtn.style.display = "inline-block";
+    backBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams(window.location.search);
+      const accountId = params.get("account_id"); // passed from ledger when we add it (see step C)
+      if (window.history.length > 1) {
+        // Most cases: you clicked from ledger, so this goes back exactly where you were
+        window.history.back();
+      } else if (accountId) {
+        // Opened in a new tab with account_id available — go straight to that ledger
+        window.location.href = `ledger.html?account_id=${encodeURIComponent(accountId)}`;
+      } else {
+        // Fallback if no history and no account hint
+        window.location.href = "ledger.html";
+      }
+    });
+  }
 
   // Render the entry lines (read-only)
   const tbody = document.getElementById("journalTableBody");
@@ -382,6 +406,7 @@ async function renderJournalDetailOnly(entryId) {
     tbody.appendChild(tr);
   });
 }
+
 
 function actionButtons(entryId) {
   return `
