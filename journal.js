@@ -12,37 +12,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   await bootstrapUserRole();
   await populateAccountDropdowns();
 
+  // Compose events (entry form)
   document.getElementById("addRowBtn").addEventListener("click", addJournalRow);
   document.getElementById("submitJournalBtn").addEventListener("click", submitJournalEntry);
   document.getElementById("resetJournalBtn").addEventListener("click", resetJournal);
-  document.getElementById("statusFilter").addEventListener("change", loadJournalEntries);
-  document.getElementById("filterBtn").addEventListener("click", loadJournalEntries);
 
-  // Create and add a search bar dynamically (if not already present)
-  if (!document.getElementById("searchInput")) {
-    const container = document.querySelector(".form-actions");
-    if (container) {
-      const input = document.createElement("input");
-      input.id = "searchInput";
-      input.placeholder = "Search by account, amount, or date (e.g. Cash, 500, 2025-10-20)";
-      input.style.marginLeft = "10px";
-      input.style.padding = ".4rem";
-      input.style.width = "280px";
-      container.appendChild(input);
+  // Filters (any field can be blank)
+  document.getElementById("filterBtn").addEventListener("click", () => loadJournalEntries(false));
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    document.getElementById("statusFilter").value = "all";
+    document.getElementById("startDate").value = "";
+    document.getElementById("endDate").value = "";
+    document.getElementById("entrySearch").value = "";
+    loadJournalEntries(true); // show all
+  });
 
-      const btn = document.createElement("button");
-      btn.classList.add("btn");
-      btn.textContent = "Search";
-      btn.addEventListener("click", loadJournalEntries);
-      container.appendChild(btn);
-    }
-  }
+  // Search (submitted section)
+  document.getElementById("searchBtn").addEventListener("click", () => loadJournalEntries(false));
+  document.getElementById("entrySearch").addEventListener("keyup", (e) => {
+    if (e.key === "Enter") loadJournalEntries(false);
+  });
 
+  // Managers can see Actions column
   if (CURRENT_USER.role === "manager") {
     const actionsHeader = document.getElementById("actionsHeader");
     if (actionsHeader) actionsHeader.style.display = "";
   }
 
+  // Initial load: show ALL entries
   await loadJournalEntries(true);
 });
 
@@ -168,7 +165,7 @@ async function approveEntry(entryId) {
   await postApprovedEntryToLedger(entryId);
 
   alert("Entry approved and posted to ledger.");
-  loadJournalEntries(true);
+  loadJournalEntries(false);
 }
 
 async function rejectEntry(entryId) {
@@ -182,7 +179,7 @@ async function rejectEntry(entryId) {
 
   if (error) return alert("Failed to reject entry.");
   alert("Entry rejected.");
-  loadJournalEntries(true);
+  loadJournalEntries(false);
 }
 
 async function postApprovedEntryToLedger(entryId) {
@@ -215,7 +212,7 @@ async function postApprovedEntryToLedger(entryId) {
       const newBal = Number((currentBal + delta).toFixed(2));
 
       await db.from("ledger").insert([{
-        journal_entry_id: entryId,
+        journal_entry_id: entryId,                // <-- PR back-link
         account_number: acc.account_number,
         account_name: acc.account_name,
         date: entry.date,
@@ -232,17 +229,17 @@ async function postApprovedEntryToLedger(entryId) {
 }
 
 // -------------------------
-// Load journal entries (filter + search)
+// Load journal entries (filters + search)
 // -------------------------
-async function loadJournalEntries(forceAll = false) {
-  const statusDropdown = document.getElementById("statusFilter");
-  let status = statusDropdown?.value || "all";
-  if (forceAll) status = "all";
+async function loadJournalEntries(showAll) {
+  // Read filters
+  const status = showAll ? "all" : (document.getElementById("statusFilter").value || "all");
+  const startDate = document.getElementById("startDate").value || "";
+  const endDate   = document.getElementById("endDate").value   || "";
+  const searchRaw = (document.getElementById("entrySearch").value || "").trim();
+  const search = searchRaw.toLowerCase();
 
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
-
+  // Build Supabase query (apply only filled filters)
   let query = db.from("journal_entries").select(`
     entry_id,
     date,
@@ -261,7 +258,7 @@ async function loadJournalEntries(forceAll = false) {
 
   if (status !== "all") query = query.eq("status", status);
   if (startDate) query = query.gte("date", startDate);
-  if (endDate) query = query.lte("date", endDate);
+  if (endDate)   query = query.lte("date", endDate);
 
   const { data, error } = await query.order("date", { ascending: false });
 
@@ -275,18 +272,41 @@ async function loadJournalEntries(forceAll = false) {
 
   let rows = data || [];
 
-  // Apply search filtering
+  // ---- Client-side SEARCH: account name, amount, or date ----
   if (search) {
+    const isNumeric = !isNaN(Number(search));
     rows = rows.filter(e => {
-      const dateMatch = e.date?.includes(search);
-      const lineText = (e.journal_lines || []).map(l =>
-        `${l.accounts.account_name} ${l.debit} ${l.credit}`.toLowerCase()
-      ).join(" ");
-      const amountMatch = lineText.includes(search);
+      // Date match: allow both raw YYYY-MM-DD and localized date
+      const dateIso = e.date || "";
+      const dateLocal = e.date ? new Date(e.date).toLocaleDateString().toLowerCase() : "";
+      const dateMatch = dateIso.includes(search) || dateLocal.includes(search);
+
+      // Account name & line amounts
+      const lines = e.journal_lines || [];
+      const lineText = lines.map(l => (l.accounts?.account_name || "").toLowerCase()).join(" ");
       const nameMatch = lineText.includes(search);
-      return dateMatch || amountMatch || nameMatch;
+
+      // Amount match: check total debit/credit and each line debit/credit
+      let amountMatch = false;
+      if (isNumeric) {
+        const target = Number(search).toFixed(2);
+        if (
+          Number(e.total_debit || 0).toFixed(2) === target ||
+          Number(e.total_credit || 0).toFixed(2) === target
+        ) {
+          amountMatch = true;
+        } else {
+          amountMatch = lines.some(l =>
+            Number(l.debit || 0).toFixed(2) === target ||
+            Number(l.credit || 0).toFixed(2) === target
+          );
+        }
+      }
+
+      return dateMatch || nameMatch || amountMatch;
     });
   }
+  // ----------------------------------------------------------
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No entries found</td></tr>`;
@@ -297,13 +317,15 @@ async function loadJournalEntries(forceAll = false) {
     const linesHtml = (entry.journal_lines || [])
       .map(l => `${l.accounts.account_name}: D ${Number(l.debit||0).toFixed(2)} / C ${Number(l.credit||0).toFixed(2)}`)
       .join("<br>");
+
     const canAct = CURRENT_USER.role === "manager" && entry.status === "pending";
+
     const tr = document.createElement("tr");
     tr.style.backgroundColor =
       entry.status === "approved" ? "#e7f7eb" : entry.status === "rejected" ? "#fde8e8" : "transparent";
 
     tr.innerHTML = `
-      <td>${new Date(entry.date).toLocaleDateString()}</td>
+      <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ""}</td>
       <td>${entry.status}</td>
       <td>${Number(entry.total_debit).toFixed(2)}</td>
       <td>${Number(entry.total_credit).toFixed(2)}</td>
@@ -342,13 +364,14 @@ document.addEventListener("click", e => {
 });
 
 // -------------------------
-// Journal detail view (from ledger link)
+// Journal detail view (from ledger PR link)
 // -------------------------
 document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const entryId = params.get("entry_id");
   if (!entryId) return;
 
+  // Read-only display of that entry
   document.querySelector(".form-actions")?.remove();
   const formTables = document.querySelectorAll("table");
   formTables[0].insertAdjacentHTML("beforebegin", `<h3>Viewing Journal Entry #${entryId}</h3>`);

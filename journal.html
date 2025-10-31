@@ -6,6 +6,12 @@
   <title>Journalize</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="journal.css">
+  <style>
+    .filters { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+    .filters label { display:flex; gap:.35rem; align-items:center; }
+    .search-row { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 0; }
+    .search-row input { padding:.4rem; min-width:260px; }
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -77,20 +83,29 @@
 
         <hr>
 
-        <!-- Filters / Search for submitted journal entries -->
+        <!-- Submitted Journal Entries -->
         <h3>Submitted Journal Entries</h3>
-        <div class="form-actions">
+
+        <!-- Filters (any can be left blank) -->
+        <div class="filters">
           <label>Status:
             <select id="statusFilter">
+              <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
-              <option value="all">All</option>
             </select>
           </label>
           <label>Start Date: <input type="date" id="startDate"></label>
           <label>End Date: <input type="date" id="endDate"></label>
-          <button class="btn" id="filterBtn">Filter</button>
+          <button class="btn" id="filterBtn">Apply Filters</button>
+          <button class="btn" id="clearBtn">Clear</button>
+        </div>
+
+        <!-- Search inside submitted section -->
+        <div class="search-row">
+          <input id="entrySearch" type="text" placeholder="Search by account name, amount, or date (e.g., Cash, 500, 2025-10-20)">
+          <button class="btn" id="searchBtn">Search</button>
         </div>
 
         <div class="table-wrap">
@@ -122,11 +137,9 @@
 <script src="auth.js"></script>
 <script src="journal.js"></script>
 <script>
-  // Logout functionality
+  // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    try { 
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
-    } catch(e){}
+    try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
     localStorage.removeItem('username');
     location.href = 'HornetHiveLogin.html';
   });
