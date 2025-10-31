@@ -18,18 +18,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("resetJournalBtn").addEventListener("click", resetJournal);
 
   // Filters (any field can be blank)
-  document.getElementById("filterBtn").addEventListener("click", () => loadJournalEntries(false));
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    document.getElementById("statusFilter").value = "all";
-    document.getElementById("startDate").value = "";
-    document.getElementById("endDate").value = "";
-    document.getElementById("entrySearch").value = "";
+  document.getElementById("filterBtn")?.addEventListener("click", () => loadJournalEntries(false));
+  document.getElementById("clearBtn")?.addEventListener("click", () => {
+    const sf = document.getElementById("statusFilter"); if (sf) sf.value = "all";
+    const sd = document.getElementById("startDate"); if (sd) sd.value = "";
+    const ed = document.getElementById("endDate");   if (ed) ed.value = "";
+    const es = document.getElementById("entrySearch"); if (es) es.value = "";
     loadJournalEntries(true); // show all
   });
 
   // Search (submitted section)
-  document.getElementById("searchBtn").addEventListener("click", () => loadJournalEntries(false));
-  document.getElementById("entrySearch").addEventListener("keyup", (e) => {
+  document.getElementById("searchBtn")?.addEventListener("click", () => loadJournalEntries(false));
+  document.getElementById("entrySearch")?.addEventListener("keyup", (e) => {
     if (e.key === "Enter") loadJournalEntries(false);
   });
 
@@ -39,8 +39,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (actionsHeader) actionsHeader.style.display = "";
   }
 
-  // Initial load: show ALL entries
-  await loadJournalEntries(true);
+  // If opened as a PR deep-link (?entry_id=...), switch to "detail view"
+  const params = new URLSearchParams(window.location.search);
+  const entryId = params.get("entry_id");
+  if (entryId) {
+    await renderJournalDetailOnly(entryId);
+  } else {
+    // Normal page load -> show ALL entries initially
+    await loadJournalEntries(true);
+  }
 });
 
 async function bootstrapUserRole() {
@@ -232,14 +239,13 @@ async function postApprovedEntryToLedger(entryId) {
 // Load journal entries (filters + search)
 // -------------------------
 async function loadJournalEntries(showAll) {
-  // Read filters
-  const status = showAll ? "all" : (document.getElementById("statusFilter").value || "all");
-  const startDate = document.getElementById("startDate").value || "";
-  const endDate   = document.getElementById("endDate").value   || "";
-  const searchRaw = (document.getElementById("entrySearch").value || "").trim();
+  // Read filters (exist only on the normal page, not in detail view)
+  const status = showAll ? "all" : (document.getElementById("statusFilter")?.value || "all");
+  const startDate = document.getElementById("startDate")?.value || "";
+  const endDate   = document.getElementById("endDate")?.value   || "";
+  const searchRaw = (document.getElementById("entrySearch")?.value || "").trim();
   const search = searchRaw.toLowerCase();
 
-  // Build Supabase query (apply only filled filters)
   let query = db.from("journal_entries").select(`
     entry_id,
     date,
@@ -263,6 +269,7 @@ async function loadJournalEntries(showAll) {
   const { data, error } = await query.order("date", { ascending: false });
 
   const tbody = document.getElementById("journalEntriesTableBody");
+  if (!tbody) return; // when in detail view, this section is removed
   tbody.innerHTML = "";
 
   if (error) {
@@ -272,21 +279,18 @@ async function loadJournalEntries(showAll) {
 
   let rows = data || [];
 
-  // ---- Client-side SEARCH: account name, amount, or date ----
+  // client-side search: account name, amount, or date
   if (search) {
     const isNumeric = !isNaN(Number(search));
     rows = rows.filter(e => {
-      // Date match: allow both raw YYYY-MM-DD and localized date
       const dateIso = e.date || "";
       const dateLocal = e.date ? new Date(e.date).toLocaleDateString().toLowerCase() : "";
       const dateMatch = dateIso.includes(search) || dateLocal.includes(search);
 
-      // Account name & line amounts
       const lines = e.journal_lines || [];
       const lineText = lines.map(l => (l.accounts?.account_name || "").toLowerCase()).join(" ");
       const nameMatch = lineText.includes(search);
 
-      // Amount match: check total debit/credit and each line debit/credit
       let amountMatch = false;
       if (isNumeric) {
         const target = Number(search).toFixed(2);
@@ -302,11 +306,9 @@ async function loadJournalEntries(showAll) {
           );
         }
       }
-
       return dateMatch || nameMatch || amountMatch;
     });
   }
-  // ----------------------------------------------------------
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No entries found</td></tr>`;
@@ -338,44 +340,20 @@ async function loadJournalEntries(showAll) {
   });
 }
 
-function actionButtons(entryId) {
-  return `
-    <div style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
-      <input type="text" placeholder="Comment (for reject)" data-comment-for="${entryId}" style="max-width:220px">
-      <button class="btn btn-approve" data-approve="${entryId}">Approve</button>
-      <button class="btn btn-reject" data-reject="${entryId}">Reject</button>
-    </div>`;
-}
-
-// Approve/Reject button handling
-document.addEventListener("click", e => {
-  const approveBtn = e.target.closest("[data-approve]");
-  const rejectBtn = e.target.closest("[data-reject]");
-  if (approveBtn) approveEntry(Number(approveBtn.getAttribute("data-approve")));
-  if (rejectBtn) {
-    const entryId = Number(rejectBtn.getAttribute("data-reject"));
-    const input = document.querySelector(`[data-comment-for="${entryId}"]`);
-    const comment = input?.value;
-    if (!comment?.trim()) return alert("Please enter a rejection comment.");
-    const originalPrompt = window.prompt;
-    window.prompt = () => comment;
-    rejectEntry(entryId).finally(() => { window.prompt = originalPrompt; });
-  }
-});
-
 // -------------------------
-// Journal detail view (from ledger PR link)
+// PR deep-link: show ONLY the single journal
 // -------------------------
-document.addEventListener("DOMContentLoaded", async () => {
-  const params = new URLSearchParams(window.location.search);
-  const entryId = params.get("entry_id");
-  if (!entryId) return;
-
-  // Read-only display of that entry
+async function renderJournalDetailOnly(entryId) {
+  // Remove the “Submitted Journal Entries” section & the compose buttons
+  document.getElementById("submittedSection")?.remove();
   document.querySelector(".form-actions")?.remove();
-  const formTables = document.querySelectorAll("table");
-  formTables[0].insertAdjacentHTML("beforebegin", `<h3>Viewing Journal Entry #${entryId}</h3>`);
 
+  // Retitle the page
+  const topTitle = document.getElementById("journalTopTitle");
+  if (topTitle) topTitle.textContent = `Journal Entry #${entryId}`;
+  document.title = `Journal Entry #${entryId}`;
+
+  // Render the entry lines (read-only)
   const tbody = document.getElementById("journalTableBody");
   tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Loading entry...</td></tr>`;
 
@@ -386,6 +364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       accounts!inner(account_name)
     `)
     .eq("journal_entry_id", entryId);
+
   if (error || !data?.length) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">No data found</td></tr>`;
     return;
@@ -402,4 +381,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       <td class="muted">—</td>`;
     tbody.appendChild(tr);
   });
-});
+}
+
+function actionButtons(entryId) {
+  return `
+    <div style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
+      <input type="text" placeholder="Comment (for reject)" data-comment-for="${entryId}" style="max-width:220px">
+      <button class="btn btn-approve" data-approve="${entryId}">Approve</button>
+      <button class="btn btn-reject" data-reject="${entryId}">Reject</button>
+    </div>`;
+}
+
+// Approve/Reject button handling (only on the normal list view)
+document.addEventListener("click", e => {
+  const approveBtn = e.target.closest("[data-approve]");
+  const rejectBtn = e.target.closest("[data-reject]");
+  if (approveBtn) approveEntry(Number(approveBtn.getAttribute("data-approve")));
+  if (rejectBtn) {
+    const entryId = Number(rejectBtn.getAttribute("data-reject"));
+    const input = document.querySelector(`[data-comment-for="${entryId}"]`);
+    const comment = input?.value;
+    if (!comment?.trim()) return alert("Please enter a rejection comment.");
+    const originalPrompt = window.prompt;
+    window.prompt = () => comment;
+    rejectEntry(entryId).finally(() => { window.prompt = originalPrompt; });
+  }
+}
+);

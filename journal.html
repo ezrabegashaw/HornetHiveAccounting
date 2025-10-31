@@ -57,7 +57,7 @@
   <main class="main">
     <div class="journalBody">
       <div class="journal-card">
-        <h2>Journal Entry</h2>
+        <h2 id="journalTopTitle">Journal Entry</h2>
 
         <!-- Journal Lines Table -->
         <table>
@@ -83,49 +83,55 @@
 
         <hr>
 
-        <!-- Submitted Journal Entries -->
-        <h3>Submitted Journal Entries</h3>
+        <!-- =========================
+             Submitted Journal Entries
+             (wrapped so we can hide it)
+             ========================= -->
+        <section id="submittedSection">
+          <h3>Submitted Journal Entries</h3>
 
-        <!-- Filters (any can be left blank) -->
-        <div class="filters">
-          <label>Status:
-            <select id="statusFilter">
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </label>
-          <label>Start Date: <input type="date" id="startDate"></label>
-          <label>End Date: <input type="date" id="endDate"></label>
-          <button class="btn" id="filterBtn">Apply Filters</button>
-          <button class="btn" id="clearBtn">Clear</button>
-        </div>
+          <!-- Filters (any can be left blank) -->
+          <div class="filters">
+            <label>Status:
+              <select id="statusFilter">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+            <label>Start Date: <input type="date" id="startDate"></label>
+            <label>End Date: <input type="date" id="endDate"></label>
+            <button class="btn" id="filterBtn">Apply Filters</button>
+            <button class="btn" id="clearBtn">Clear</button>
+          </div>
 
-        <!-- Search inside submitted section -->
-        <div class="search-row">
-          <input id="entrySearch" type="text" placeholder="Search by account name, amount, or date (e.g., Cash, 500, 2025-10-20)">
-          <button class="btn" id="searchBtn">Search</button>
-        </div>
+          <!-- Search inside submitted section -->
+          <div class="search-row">
+            <input id="entrySearch" type="text" placeholder="Search by account name, amount, or date (e.g., Cash, 500, 2025-10-20)">
+            <button class="btn" id="searchBtn">Search</button>
+          </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total Debit</th>
-                <th>Total Credit</th>
-                <th>Lines</th>
-                <th>View</th>
-                <th id="actionsHeader" style="display:none;">Actions (Mgr)</th>
-              </tr>
-            </thead>
-            <tbody id="journalEntriesTableBody">
-              <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total Debit</th>
+                  <th>Total Credit</th>
+                  <th>Lines</th>
+                  <th>View</th>
+                  <th id="actionsHeader" style="display:none;">Actions (Mgr)</th>
+                </tr>
+              </thead>
+              <tbody id="journalEntriesTableBody">
+                <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <!-- /#submittedSection -->
 
       </div>
     </div>
