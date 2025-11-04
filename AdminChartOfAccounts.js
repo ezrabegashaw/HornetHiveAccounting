@@ -4,7 +4,7 @@
 let db = window.supabaseClient;
 if (!db && window.supabase) {
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-  const SUPABASE_ANON_KEY = "your-anon-key-here";
+  const SUPABASE_ANON_KEY = "your-anon-key-here"; // <-- replace with your anon key if needed
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
@@ -24,57 +24,43 @@ const tableBody = document.getElementById('accountTableBody');
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
 
+// (legacy) ledger popup elements (not used when deep-linking to ledger.html)
 const ledgerPopup = document.getElementById('ledgerPopup');
 const closeLedger = document.getElementById('closeLedger');
-const ledgerTitle = document.getElementById('ledgerTitle');
-const ledgerBody = document.getElementById('ledgerTableBody');
 
-// ---------- Helpers ----------
-function openModal(el){ el.classList.add('show'); }
-function closeModal(el){ el.classList.remove('show'); }
+function openModal(el){ el?.classList.add('show'); }
+function closeModal(el){ el?.classList.remove('show'); }
 function asMoney(n){ return Number(n || 0).toFixed(2); }
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
-// NOTE: Your accounts.user_id is int4 (not the auth UUID). If you don't
-// have an app-level numeric user id handy, set this to null (or 0) to
-// satisfy the schema.
-async function getNumericUserIdOrNull() {
-  try {
-    // If you have a mapping table from auth uid -> users.id, look it up here.
-    // For now, return null to avoid type mismatch on int4.
-    return null;
-  } catch { return null; }
-}
+// If you don’t have a numeric user id in your app, return null for accounts.user_id (int4)
+async function getNumericUserIdOrNull() { return null; }
 
 async function logEvent(action, before, after) {
-    const { error } = await db.from('eventLog').insert([{
-      userId: await getNumericUserIdOrNull(),
-      timestamp: new Date().toISOString(),
-      action,
-      before: before ? JSON.stringify(before) : null,
-      after:  after  ? JSON.stringify(after)  : null
-    }]);
-    if (error) {
-      console.warn('logEvent failed:', error.message);
-      alert('Event log insert failed: ' + error.message); // temporary to see issues
-    }
-  }  
+  const { error } = await db.from('eventLog').insert([{
+    userId: await getNumericUserIdOrNull(),
+    timestamp: new Date().toISOString(),
+    action,
+    before: before ? JSON.stringify(before) : null,
+    after:  after  ? JSON.stringify(after)  : null
+  }]);
+  if (error) console.warn('logEvent failed:', error.message);
+}
 
-// ---------- Load Accounts ----------
+// ---------- Load Accounts (Admin) ----------
 export async function loadAccounts(searchTerm = "") {
-  // Query the view so we get computed_balance
-  let base = db.from('v_account_balances')
+  let query = db.from('v_account_balances')
     .select('*')
     .order('account_number', { ascending: true });
 
   if (searchTerm) {
-    base = db.from('v_account_balances')
+    query = db.from('v_account_balances')
       .select('*')
       .or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`)
       .order('account_number', { ascending: true });
   }
 
-  const { data, error } = await base;
+  const { data, error } = await query;
 
   tableBody.innerHTML = '';
   if (error) {
@@ -91,10 +77,15 @@ export async function loadAccounts(searchTerm = "") {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${acc.account_number}</td>
-      <td><span class="ledger-link" data-num="${acc.account_number}" data-name="${acc.account_name}">${acc.account_name}</span></td>
+      <td>
+        <!-- ✅ Admin deep-link to ledger.html just like other roles -->
+        <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
+          ${acc.account_name}
+        </a>
+      </td>
       <td>${acc.account_category ?? ''}</td>
       <td>${acc.normal_side ?? ''}</td>
-      <td>${Number(acc.computed_balance ?? 0).toFixed(2)}</td>
+      <td>${asMoney(acc.computed_balance)}</td>
       <td>${acc.user_id ?? 'N/A'}</td>
       <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
       <td>${acc.comment || ''}</td>
@@ -103,49 +94,19 @@ export async function loadAccounts(searchTerm = "") {
   });
 }
 
+/* NOTE:
+   The ledger page (ledger.html) already renders a clickable posting reference (J-###)
+   that links to journal.html?entry_id=###. By sending Admins to ledger.html via the
+   account-name link above, Admins now also get “click ref → open journal entry”.
+*/
 
-// ---------- Ledger ----------
-async function openLedger(accountNumber, accountName) {
-  openModal(ledgerPopup);
-  ledgerTitle.textContent = `Ledger for ${accountName} (${accountNumber})`;
-  ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
-
-  const { data, error } = await db
-    .from('ledger')
-    .select('*')
-    .eq('account_number', accountNumber)
-    .order('date', { ascending: true });
-
-  if (error) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Error loading ledger</td></tr>';
-    console.error(error.message);
-    return;
-  }
-  if (!data?.length) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No transactions found</td></tr>';
-    return;
-  }
-
-  ledgerBody.innerHTML = '';
-  data.forEach(entry => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
-      <td>${entry.description || ''}</td>
-      <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
-      <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
-      <td>${entry.balance ? Number(entry.balance).toFixed(2) : ''}</td>
-    `;
-    ledgerBody.appendChild(row);
-  });
-}
-
-// ---------- Populate Deactivate Select ----------
+// ---------- Deactivate dropdown ----------
 async function populateDeactivateOptions() {
   const { data, error } = await db.from('accounts')
     .select('account_number, account_name')
     .eq('is_active', true)
     .order('account_number');
+
   deactivateSelect.innerHTML = '<option value="">-- Select an Account --</option>';
   if (error) return;
   (data || []).forEach(a => {
@@ -156,7 +117,7 @@ async function populateDeactivateOptions() {
   });
 }
 
-// ---------- Add Account Submit ----------
+// ---------- Add Account ----------
 async function submitAccount(e) {
   e.preventDefault();
 
@@ -165,29 +126,23 @@ async function submitAccount(e) {
     account_number: document.getElementById('account_number').value.trim(),
     normal_side: document.getElementById('normal_side').value,
     account_category: document.getElementById('account_category').value.trim(),
-    account_subcategory: document.getElementById('account_subcategory').value.trim() || null,
-    // numeric columns -> send numbers (Supabase will accept strings but let's be explicit)
+    account_subcategory: (document.getElementById('account_subcategory').value.trim() || null),
     initial_balance: Number(document.getElementById('initial_balance').value || 0),
-    // IMPORTANT: your schema uses account_order (varchar) not "order"
-    account_order: document.getElementById('account_order').value.trim() || null,
+    account_order: (document.getElementById('account_order').value.trim() || null),
     statement_type: document.getElementById('statement_type').value,
-    // IMPORTANT: your schema uses account_description (text) not "description"
-    account_description: document.getElementById('account_description').value.trim() || null,
-    comment: document.getElementById('comment').value.trim() || null,
+    account_description: (document.getElementById('account_description').value.trim() || null),
+    comment: (document.getElementById('comment').value.trim() || null),
     is_active: true,
     date_added: new Date().toISOString(),
-    // user_id is int4, so use a numeric id from your app if you have one; otherwise null
     user_id: await getNumericUserIdOrNull()
   };
 
-  // Basic validation
   if (!account.account_name) return alert('Account name is required.');
   if (!isDigitsOnly(account.account_number)) return alert('Account number must be digits only.');
   if (!account.normal_side) return alert('Please choose a Normal Side.');
   if (!account.account_category) return alert('Category is required.');
   if (!account.statement_type) return alert('Please choose a Statement Type.');
 
-  // Duplicate check (name or number)
   const { data: existing, error: dupErr } = await db
     .from('accounts')
     .select('account_name, account_number')
@@ -203,7 +158,6 @@ async function submitAccount(e) {
     return;
   }
 
-  // Insert
   const { error } = await db.from('accounts').insert([account]);
   if (error) {
     alert('Error adding account: ' + error.message);
@@ -212,16 +166,12 @@ async function submitAccount(e) {
 
   await logEvent('add_account', null, account);
   alert('Account added successfully.');
-
-  // Reset & close
   form.reset();
   closeModal(popup);
-
-  // Refresh list
   await loadAccounts(searchInput.value.trim());
 }
 
-// ---------- Deactivate Submit ----------
+// ---------- Deactivate ----------
 async function submitDeactivate(e) {
   e.preventDefault();
   const acctNum = deactivateSelect.value;
@@ -242,42 +192,30 @@ async function submitDeactivate(e) {
 
 // ---------- Events ----------
 document.addEventListener('DOMContentLoaded', () => {
-  // Initial table load
   loadAccounts();
 
-  // Search
   searchBtn?.addEventListener('click', () => {
     loadAccounts(searchInput.value.trim());
   });
+  searchInput?.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') loadAccounts(searchInput.value.trim());
+  });
 
-  // Open/close Add popup
-  addBtn?.addEventListener('click', async () => { openModal(popup); });
+  // Add account popup
+  addBtn?.addEventListener('click', () => openModal(popup));
   closePopupBtn?.addEventListener('click', () => closeModal(popup));
   popup?.addEventListener('click', (e) => { if (e.target === popup) closeModal(popup); });
-
-  // Submit new account
   form?.addEventListener('submit', submitAccount);
 
-  // Open/close Deactivate popup
+  // Deactivate popup
   deactivateBtn?.addEventListener('click', async () => {
     await populateDeactivateOptions();
     openModal(deactivateOverlay);
   });
   closeDeactivateBtn?.addEventListener('click', () => closeModal(deactivateOverlay));
   deactivateOverlay?.addEventListener('click', (e) => { if (e.target === deactivateOverlay) closeModal(deactivateOverlay); });
-  deactivateForm?.addEventListener('submit', submitDeactivate);
 
-  // Ledger link clicks (event delegation)
-  tableBody?.addEventListener('click', (e) => {
-    const link = e.target.closest('.ledger-link');
-    if (link) {
-      const num = link.getAttribute('data-num');
-      const name = link.getAttribute('data-name');
-      openLedger(num, name);
-    }
-  });
-
-  // Close ledger
+  // Legacy popup close (not used now)
   closeLedger?.addEventListener('click', () => closeModal(ledgerPopup));
   ledgerPopup?.addEventListener('click', (e) => { if (e.target === ledgerPopup) closeModal(ledgerPopup); });
 });

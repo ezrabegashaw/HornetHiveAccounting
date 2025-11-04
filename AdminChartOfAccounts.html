@@ -9,17 +9,17 @@
   <link rel="stylesheet" href="chart_override.css">
   <link rel="stylesheet" href="ledger_popup.css">
   <style>
-    /* Minimal safe defaults (kept tiny so it won't fight the CSS) */
     .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000}
     .popup-overlay.show{display:flex}
     .popup-card{background:#fff;border-radius:12px;max-width:860px;width:95%;padding:1rem}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
     .form-actions{display:flex;gap:.5rem;justify-content:flex-end}
+    /* legacy popup (unused now) */
     .ledger-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:999}
     .ledger-popup .ledger-card{background:#fff;border-radius:12px;max-width:900px;width:95%;padding:1rem}
     .ledger-close{float:right}
-    .ledger-link{color:#0a58ca;cursor:pointer;text-decoration:underline}
     .button,.btn,button{cursor:pointer}
+    a.link{ color:#0a58ca; text-decoration:underline; }
   </style>
 </head>
 
@@ -92,7 +92,7 @@
   </main>
 </div>
 
-<!-- Ledger Popup -->
+<!-- (legacy) Ledger Popup – kept for compatibility but not used by the new links -->
 <div id="ledgerPopup" class="ledger-popup">
   <div class="ledger-card">
     <button class="ledger-close" id="closeLedger">Close</button>
@@ -180,11 +180,8 @@
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 
-  // Logout functionality
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    try { 
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
-    } catch(e){}
+    try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
     localStorage.removeItem('username');
     location.href = 'HornetHiveLogin.html';
   });
