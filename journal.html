@@ -11,6 +11,18 @@
     .filters label { display:flex; gap:.35rem; align-items:center; }
     .search-row { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 0; }
     .search-row input { padding:.4rem; min-width:260px; }
+    #journalErrors {
+    display:none;
+    color:#b91c1c;                /* red text */
+    background:#fee2e2;           /* light red background */
+    border:1px solid #fecaca;     /* light red border */
+    padding:.65rem .8rem;
+    border-radius:8px;
+    margin:.5rem 0 .25rem;
+    line-height:1.35;
+    }
+    #journalErrors ul { margin:.25rem 0 0 .95rem; }
+    #journalErrors .title { font-weight:600; }
   </style>
 </head>
 
@@ -59,6 +71,9 @@
       <div class="journal-card">
         <h2 id="journalTopTitle">Journal Entry</h2>
         <a id="backToLedgerBtn" class="btn" style="display:none; margin:6px 0;">&larr; Back to Ledger</a>
+        
+        <div id="journalErrors"></div>
+
         <!-- Journal Lines Table -->
         <table>
           <thead>
@@ -142,6 +157,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script src="journal.js"></script>
+<script src="notify.js"></script>
 <script>
   // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {

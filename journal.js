@@ -84,32 +84,222 @@ function addJournalRow() {
   const tbody = document.getElementById("journalTableBody");
   const row = document.createElement("tr");
 
-  const accountSelect = `<select class="accountSelect">
-    <option value="">Select account</option>
-    ${accountOptions.map(a => `<option value="${a.account_id}">${a.account_name}</option>`).join("")}
-  </select>`;
+  const accountSelect = document.createElement("select");
+  accountSelect.className = "accountSelect";
+  accountSelect.innerHTML = `<option value="">Select account</option>`;
+  // fill options (we'll prune after we append the row)
+  accountOptions.forEach(a => {
+    const opt = document.createElement("option");
+    opt.value = String(a.account_id);
+    opt.textContent = a.account_name;
+    accountSelect.appendChild(opt);
+  });
 
-  row.innerHTML = `
-    <td>${accountSelect}</td>
-    <td><input type="number" step="0.01" class="debitInput" placeholder="0.00"></td>
-    <td><input type="number" step="0.01" class="creditInput" placeholder="0.00"></td>
-    <td><input type="text" class="descriptionInput" placeholder="Description"></td>
-    <td><button class="removeRowBtn">Remove</button></td>
-  `;
+  const debit = document.createElement("input");
+  debit.type = "number";
+  debit.step = "0.01";
+  debit.className = "debitInput";
+  debit.placeholder = "0.00";
+
+  const credit = document.createElement("input");
+  credit.type = "number";
+  credit.step = "0.01";
+  credit.className = "creditInput";
+  credit.placeholder = "0.00";
+
+  const desc = document.createElement("input");
+  desc.type = "text";
+  desc.className = "descriptionInput";
+  desc.placeholder = "Description";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "removeRowBtn";
+  removeBtn.type = "button";
+  removeBtn.textContent = "Remove";
+
+  const td1 = document.createElement("td"); td1.appendChild(accountSelect);
+  const td2 = document.createElement("td"); td2.appendChild(debit);
+  const td3 = document.createElement("td"); td3.appendChild(credit);
+  const td4 = document.createElement("td"); td4.appendChild(desc);
+  const td5 = document.createElement("td"); td5.appendChild(removeBtn);
+
+  row.append(td1, td2, td3, td4, td5);
   tbody.appendChild(row);
-  row.querySelector(".removeRowBtn").addEventListener("click", () => row.remove());
+
+  // When any value changes, re-validate and refresh account options
+  accountSelect.addEventListener("change", () => {
+    refreshAccountSelectOptions();
+    validateJournal(); // live validation feedback
+  });
+  debit.addEventListener("input", () => validateJournal());
+  credit.addEventListener("input", () => validateJournal());
+  desc.addEventListener("input", () => validateJournal());
+
+  removeBtn.addEventListener("click", () => {
+    row.remove();
+    refreshAccountSelectOptions();
+    validateJournal();
+  });
+
+  // After adding a new row, prune duplicates from dropdowns
+  refreshAccountSelectOptions();
 }
+
 
 function resetJournal() {
   const tbody = document.getElementById("journalTableBody");
   tbody.innerHTML = "";
   addJournalRow();
+  validateJournal();
+}
+function getAllRows() {
+  return Array.from(document.querySelectorAll("#journalTableBody tr"));
 }
 
-async function submitJournalEntry() {
-  const rows = document.querySelectorAll("#journalTableBody tr");
-  if (!rows.length) return alert("No journal lines to submit.");
+function getSelectedAccountIds() {
+  const ids = [];
+  getAllRows().forEach(r => {
+    const val = r.querySelector(".accountSelect")?.value || "";
+    if (val) ids.push(val);
+  });
+  return ids;
+}
 
+/**
+ * Keep already-selected accounts from appearing in other row dropdowns.
+ * Each select always keeps its own current value visible.
+ */
+function refreshAccountSelectOptions() {
+  const rows = getAllRows();
+  const selected = getSelectedAccountIds(); // strings
+
+  rows.forEach(r => {
+    const sel = r.querySelector(".accountSelect");
+    if (!sel) return;
+    const current = sel.value;
+
+    // rebuild sel options from accountOptions while removing other rows' selections
+    const taken = new Set(selected.filter(id => id !== current));
+
+    // Remember current scroll/selection to keep UX smooth
+    const previous = current;
+
+    // Rebuild
+    sel.innerHTML = `<option value="">Select account</option>`;
+    accountOptions.forEach(a => {
+      const id = String(a.account_id);
+      if (taken.has(id)) return; // hide account if used in another row
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = a.account_name;
+      sel.appendChild(opt);
+    });
+
+    // Restore current if still allowed; if not, keep empty
+    if (previous && Array.from(sel.options).some(o => o.value === previous)) {
+      sel.value = previous;
+    } else if (previous) {
+      // previously-selected value got taken by another row — clear it
+      sel.value = "";
+    }
+  });
+}
+
+/**
+ * Validate the journal entry.
+ * Rules:
+ *  - At least 1 row
+ *  - Each row: one side only (debit XOR credit), amount > 0
+ *  - No duplicate accounts (server-side checked too, but enforced here)
+ *  - Debits must equal credits (sum)
+ * Displays errors in #journalErrors (red)
+ * Returns { ok: boolean, errors: string[] }
+ */
+function validateJournal() {
+  const errors = [];
+  const rows = getAllRows();
+  const errorBox = document.getElementById("journalErrors");
+
+  // no rows
+  if (!rows.length) {
+    errors.push("Add at least one journal line.");
+  }
+
+  const seenAccounts = new Set();
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  rows.forEach((row, idx) => {
+    const lineNum = idx + 1;
+    const sel = row.querySelector(".accountSelect");
+    const debitEl = row.querySelector(".debitInput");
+    const creditEl = row.querySelector(".creditInput");
+
+    const accountId = sel?.value || "";
+    const d = parseFloat(debitEl?.value || "0") || 0;
+    const c = parseFloat(creditEl?.value || "0") || 0;
+
+    // must pick account
+    if (!accountId) {
+      errors.push(`Line ${lineNum}: select an account.`);
+    }
+
+    // exactly one side, positive
+    const hasDebit = d > 0;
+    const hasCredit = c > 0;
+    if ((hasDebit && hasCredit) || (!hasDebit && !hasCredit)) {
+      errors.push(`Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`);
+    }
+
+    // track sums
+    totalDebit += d;
+    totalCredit += c;
+
+    // duplicates: if already seen, flag (we also hide in dropdowns, but this guards against HTML edits)
+    if (accountId) {
+      if (seenAccounts.has(accountId)) {
+        errors.push(`Line ${lineNum}: account is used more than once in this entry.`);
+      } else {
+        seenAccounts.add(accountId);
+      }
+    }
+  });
+
+  // balance check (only if we have lines)
+  if (rows.length) {
+    const d = Number(totalDebit.toFixed(2));
+    const c = Number(totalCredit.toFixed(2));
+    if (d !== c) {
+      errors.push(`Debits and Credits must balance. Current totals: Debit ${d.toFixed(2)} vs Credit ${c.toFixed(2)}.`);
+    }
+  }
+
+  // render errors
+  if (errorBox) {
+    if (errors.length) {
+      errorBox.style.display = "block";
+      errorBox.innerHTML = `
+        <div class="title">Please fix the following:</div>
+        <ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul>
+      `;
+      // scroll into view for visibility
+      errorBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else {
+      errorBox.style.display = "none";
+      errorBox.innerHTML = "";
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+
+async function submitJournalEntry() {
+  // ✅ Hard block if validation fails; shows red messages automatically
+  const { ok } = validateJournal();
+  if (!ok) return;
+
+  const rows = document.querySelectorAll("#journalTableBody tr");
   let totalDebit = 0, totalCredit = 0;
   const lines = [];
 
@@ -119,16 +309,9 @@ async function submitJournalEntry() {
     const credit = parseFloat(row.querySelector(".creditInput").value) || 0;
     const description = row.querySelector(".descriptionInput").value;
 
-    if (!accountId) return alert("All rows must have an account selected.");
-    if (debit === 0 && credit === 0) return alert("Each row must have a debit or credit value.");
-
     totalDebit += debit;
     totalCredit += credit;
     lines.push({ account_id: Number(accountId), debit, credit, description });
-  }
-
-  if (Number(totalDebit.toFixed(2)) !== Number(totalCredit.toFixed(2))) {
-    return alert("Total debits must equal total credits.");
   }
 
   const initialStatus = (CURRENT_USER.role === "manager") ? "approved" : "pending";
@@ -145,22 +328,46 @@ async function submitJournalEntry() {
     .select()
     .single();
 
-  if (entryError || !entryData) return alert("Failed to create journal entry.");
+  if (entryError || !entryData) {
+    // surface in red box
+    const box = document.getElementById("journalErrors");
+    if (box) {
+      box.style.display = "block";
+      box.innerHTML = `<div class="title">Save failed:</div><ul><li>${entryError?.message || "Failed to create journal entry."}</li></ul>`;
+    } else {
+      alert("Failed to create journal entry.");
+    }
+    return;
+  }
+
   const journalEntryId = entryData.entry_id;
 
   const { error: linesError } = await db.from("journal_lines").insert(
     lines.map(l => ({ ...l, journal_entry_id: journalEntryId, created_at: new Date().toISOString() }))
   );
-  if (linesError) return alert("Failed to create journal lines.");
+  if (linesError) {
+    const box = document.getElementById("journalErrors");
+    if (box) {
+      box.style.display = "block";
+      box.innerHTML = `<div class="title">Save failed:</div><ul><li>${linesError.message}</li></ul>`;
+    } else {
+      alert("Failed to create journal lines.");
+    }
+    return;
+  }
 
   if (initialStatus === "approved") {
     await postApprovedEntryToLedger(journalEntryId);
   }
 
-  alert(`Journal entry ${initialStatus === "approved" ? "saved & approved" : "submitted for approval"}!`);
+  // Clear the form & list refresh
   resetJournal();
+  const box = document.getElementById("journalErrors");
+  if (box) { box.style.display = "none"; box.innerHTML = ""; }
+  alert(`Journal entry ${initialStatus === "approved" ? "saved & approved" : "submitted for approval"}!`);
   loadJournalEntries(true);
 }
+
 
 async function approveEntry(entryId) {
   const { error: upErr } = await db
