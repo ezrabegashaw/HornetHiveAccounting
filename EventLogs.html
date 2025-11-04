@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="main.css"/>
 
   <style>
-    /* ---- Minimal, horizontal-row event log styling ---- */
+    /* ---- Minimal, professional event log styling (no yellow tints) ---- */
 
     :root{
       --line:#e5e7eb;      /* borders */
@@ -16,10 +16,12 @@
       --bg-alt:#fafafa;    /* hover / zebra */
       --pill:#111827;      /* pill text */
       --pill-bg:#f3f4f6;   /* pill bg */
-      --accent:#0ea5a6;    /* tiny accents */
       --add:#16a34a;       /* add color */
-      --upd:#f59e0b;       /* update color */
+      --upd:#334155;       /* update color (slate) */
       --deact:#ef4444;     /* deactivate color */
+      --brand:#15803d;     /* site green */
+      --changed-outline:#93c5fd; /* subtle blue outline */
+      --changed-bg:#eff6ff;      /* subtle blue bg */
     }
 
     .toolbar{
@@ -27,13 +29,16 @@
     }
     .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select, .toolbar button{
       padding:.45rem .6rem; border:1px solid var(--line); border-radius:8px; background:#fff;
+      color:#111827; /* ensure text shows (fix "blank" look) */
     }
     .toolbar button{ cursor:pointer }
+    .toolbar button#apply{ border-color:var(--brand) }
+    .toolbar button#clear{ border-color:#cbd5e1 }
 
     /* Header row describing columns */
     .logs-head{
       display:grid;
-      grid-template-columns: 240px 1fr 1fr;
+      grid-template-columns: 260px 1fr 1fr;
       gap:1rem;
       padding:.5rem .25rem .6rem;
       border-bottom:1px solid var(--line);
@@ -49,7 +54,7 @@
     /* Each log line (horizontal row) */
     .log-card{
       display:grid;
-      grid-template-columns: 240px 1fr 1fr;
+      grid-template-columns: 260px 1fr 1fr;
       gap:1rem;
       padding:1rem .25rem;
       border-bottom:1px solid var(--line);
@@ -70,9 +75,9 @@
       font-size:.8rem;
       width:max-content;
     }
-    .log-meta .pill.add{ color:var(--add); background:color-mix(in srgb, var(--add) 10%, #fff) }
-    .log-meta .pill.update{ color:var(--upd); background:color-mix(in srgb, var(--upd) 12%, #fff) }
-    .log-meta .pill.deactivate{ color:var(--deact); background:color-mix(in srgb, var(--deact) 10%, #fff) }
+    .log-meta .pill.add{ color:var(--add); background:#ecfdf5 }
+    .log-meta .pill.update{ color:var(--upd); background:#f1f5f9 }
+    .log-meta .pill.deactivate{ color:var(--deact); background:#fef2f2 }
     .meta-line{ color:var(--muted); font-size:.9rem }
 
     /* Snapshot columns */
@@ -81,15 +86,15 @@
 
     .kv{
       display:grid;
-      grid-template-columns: 150px 1fr;
+      grid-template-columns: 160px 1fr;
       gap:.3rem .75rem;
       font-size:.95rem;
     }
     .kv .k{ color:var(--muted); }
     .kv .v{ font-weight:600; }
     .kv .v.changed{
-      background:color-mix(in srgb, var(--upd) 8%, #fff);
-      outline:1px dashed color-mix(in srgb, var(--upd) 45%, #0000);
+      background:var(--changed-bg);
+      outline:1px dashed var(--changed-outline);
       border-radius:6px; padding:.05rem .3rem;
     }
     .empty{ color:#9ca3af; font-style:italic }
@@ -101,6 +106,7 @@
     .paginate{ display:flex; justify-content:center; gap:.5rem; margin-top:1rem }
     .paginate button{
       padding:.45rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer;
+      color:#111827;
     }
 
     /* Responsive: stack columns */
@@ -110,7 +116,7 @@
         grid-template-columns: 1fr;
         gap:.5rem;
       }
-      .kv{ grid-template-columns: 120px 1fr; }
+      .kv{ grid-template-columns: 130px 1fr; }
     }
   </style>
 </head>
@@ -156,12 +162,10 @@
     <div class="header">
       <h1>Event Logs</h1>
       <div class="toolbar">
-        <input id="q" type="text" placeholder="Search name or number…"/>
+        <input id="q" type="text" placeholder="Search (entity, id, name, user)…"/>
         <select id="actionFilter">
           <option value="">All actions</option>
-          <option value="add_account">Add Account</option>
-          <option value="update_account">Update Account</option>
-          <option value="deactivate_account">Deactivate Account</option>
+          <!-- will be populated dynamically with distinct actions -->
         </select>
         <label>From <input id="fromDate" type="date"/></label>
         <label>To <input id="toDate" type="date"/></label>
@@ -170,14 +174,14 @@
       </div>
     </div>
 
-    <!-- Column headers for the horizontal layout -->
+    <!-- Column headers -->
     <div class="logs-head">
-      <div>Action / User / Time</div>
+      <div>Action / Entity / User / Time</div>
       <div>Before</div>
       <div>After</div>
     </div>
 
-    <!-- Logs (rendered by eventLogs.js) -->
+    <!-- Logs -->
     <div id="logs">
       <div class="no-results">Loading…</div>
     </div>
@@ -190,7 +194,7 @@
   </main>
 </div>
 
-<!-- Supabase + auth bootstrap (auth.js should create window.supabaseClient) -->
+<!-- Supabase + auth bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script type="module" src="eventLogs.js"></script>

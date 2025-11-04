@@ -1,29 +1,31 @@
-// eventLogs.js
+// eventLogs.js  — professional event log for all site activity
 
 // Use the Supabase client from auth.js if available; fallback if needed
 let db = window.supabaseClient;
 if (!db && window.supabase) {
-  const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-  const SUPABASE_ANON_KEY = "your-anon-key-here"; // replace with your anon key
+  // Optional fallback if you open this page directly without auth bootstrap
+  const SUPABASE_URL = "YOUR_URL";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 // ------- DOM -------
-const logsEl = document.getElementById('logs');
-const qEl = document.getElementById('q');
+const logsEl   = document.getElementById('logs');
+const qEl      = document.getElementById('q');
 const actionEl = document.getElementById('actionFilter');
-const fromEl = document.getElementById('fromDate');
-const toEl = document.getElementById('toDate');
+const fromEl   = document.getElementById('fromDate');
+const toEl     = document.getElementById('toDate');
 const applyBtn = document.getElementById('apply');
 const clearBtn = document.getElementById('clear');
-const prevBtn = document.getElementById('prevPage');
-const nextBtn = document.getElementById('nextPage');
+const prevBtn  = document.getElementById('prevPage');
+const nextBtn  = document.getElementById('nextPage');
 const pageInfo = document.getElementById('pageInfo');
 
-// ------- Paging -------
+// ------- Config / Paging -------
 const PAGE_SIZE = 20;
 let currentPage = 1;
-let cache = []; // locally filtered for paging
+let cache = [];      // locally filtered for paging
+let tableName = 'event_log'; // default new name; will auto-fallback
 
 // ------- Helpers -------
 function fmtDateTime(iso) {
@@ -36,24 +38,42 @@ function fmtDateTime(iso) {
 }
 
 function pillClass(action) {
-  if (action === 'add_account') return 'pill add';
-  if (action === 'update_account') return 'pill update';
-  if (action === 'deactivate_account') return 'pill deactivate';
-  return 'pill';
+  const a = String(action || '').toLowerCase();
+  if (a.includes('add') || a.includes('create')) return 'pill add';
+  if (a.includes('deact') || a.includes('delete') || a.includes('reject')) return 'pill deactivate';
+  return 'pill update';
 }
 
-function pickFields(obj) {
+function niceKey(k) {
+  return (k || '').replaceAll('_',' ').replace(/\b\w/g, m => m.toUpperCase());
+}
+
+// pick a safe subset of fields to display; if object is small, show everything
+function pickReadableFields(obj) {
   if (!obj) return null;
-  const {
-    account_number, account_name, account_category, account_subcategory,
-    normal_side, statement_type, initial_balance, balance, account_order,
-    account_description, user_id, date_added, is_active, comment
-  } = obj;
-  return {
-    account_number, account_name, account_category, account_subcategory,
-    normal_side, statement_type, initial_balance, balance, account_order,
-    account_description, user_id, date_added, is_active, comment
-  };
+  const keys = Object.keys(obj);
+  if (keys.length <= 24) {
+    return obj; // small — show all
+  }
+  // Prefer common business fields first
+  const preferred = [
+    'entity','entity_id','action','account_number','account_name','account_category','account_subcategory',
+    'normal_side','statement_type','initial_balance','balance','account_order','account_description',
+    'user_id','username','email','role','is_active','date','status','total_debit','total_credit','description',
+    'journal_entry_id'
+  ];
+  const out = {};
+  preferred.forEach(k => { if (k in obj) out[k] = obj[k]; });
+  // fill up to ~24 fields with remaining primitives
+  for (const k of keys) {
+    if (k in out) continue;
+    const v = obj[k];
+    if (v == null) continue;
+    if (typeof v === 'object') continue;
+    if (Object.keys(out).length >= 24) break;
+    out[k] = v;
+  }
+  return out;
 }
 
 // Return set of keys that changed (to highlight)
@@ -78,15 +98,15 @@ function renderKV(container, data, changedSet) {
     container.innerHTML = `<div class="empty">—</div>`;
     return;
   }
-  const fields = Object.entries(data);
-  if (!fields.length) {
+  const entries = Object.entries(data);
+  if (!entries.length) {
     container.innerHTML = `<div class="empty">—</div>`;
     return;
   }
   const frag = document.createDocumentFragment();
   const wrap = document.createElement('div');
   wrap.className = 'kv';
-  fields.forEach(([k, v]) => {
+  entries.forEach(([k, v]) => {
     const kEl = document.createElement('div');
     kEl.className = 'k';
     kEl.textContent = niceKey(k);
@@ -103,17 +123,40 @@ function renderKV(container, data, changedSet) {
   container.appendChild(frag);
 }
 
-function niceKey(k) {
-  return (k || '').replaceAll('_',' ').replace(/\b\w/g, m => m.toUpperCase());
+// ------- Data access -------
+async function resolveTableName() {
+  // Try event_log first; if it errors, fall back to legacy eventLog
+  try {
+    const { error } = await db.from('event_log').select('id').limit(1);
+    if (!error) { tableName = 'event_log'; return; }
+  } catch {}
+  tableName = 'eventLog';
 }
 
-// ------- Fetch & Filter -------
+async function fetchDistinctActions() {
+  // Distinct action list for filter
+  try {
+    const { data, error } = await db
+      .from(tableName)
+      .select('action')
+      .neq('action', null);
+    if (error) return;
+    const set = new Set();
+    (data || []).forEach(r => { if (r?.action) set.add(r.action); });
+    const options = Array.from(set).sort();
+    // populate
+    actionEl.innerHTML = `<option value="">All actions</option>` +
+      options.map(a => `<option value="${a}">${a}</option>`).join('');
+  } catch {}
+}
+
 async function fetchEvents() {
+  const cols = 'id, action, entity, entity_id, user_name, user_id, timestamp, before, after';
   const { data, error } = await db
-    .from('eventLog')
-    .select('*')
+    .from(tableName)
+    .select(cols)
     .order('timestamp', { ascending: false })
-    .limit(500);
+    .limit(1000);
 
   if (error) {
     logsEl.innerHTML = `<div class="no-results" style="color:#b91c1c">Error loading logs: ${error.message}</div>`;
@@ -122,6 +165,7 @@ async function fetchEvents() {
   return data || [];
 }
 
+// ------- Filter + Render -------
 function applyFilters(rows) {
   const q = (qEl.value || '').trim().toLowerCase();
   const action = actionEl.value || '';
@@ -137,15 +181,23 @@ function applyFilters(rows) {
 
     if (q) {
       let hit = false;
+      const hay = [
+        r.action, r.entity, r.entity_id, r.user_name, r.user_id
+      ].filter(Boolean).map(x => String(x).toLowerCase());
+
       try {
         const b = r.before ? JSON.parse(r.before) : null;
-        const a = r.after ? JSON.parse(r.after) : null;
-        const strings = [
-          b?.account_number, b?.account_name,
-          a?.account_number, a?.account_name
-        ].filter(Boolean).map(x => String(x).toLowerCase());
-        hit = strings.some(s => s.includes(q));
+        const a = r.after  ? JSON.parse(r.after)  : null;
+        const addl = [];
+        [b, a].forEach(o => {
+          if (!o) return;
+          ['account_number','account_name','journal_entry_id','date','status','total_debit','total_credit','username','email','role','description','name','id']
+            .forEach(k => { if (o[k] != null) addl.push(String(o[k]).toLowerCase()); });
+        });
+        hay.push(...addl);
       } catch {}
+
+      hit = hay.some(s => s.includes(q));
       if (!hit) return false;
     }
 
@@ -153,7 +205,6 @@ function applyFilters(rows) {
   });
 }
 
-// ------- Render -------
 function renderPage() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const end = start + PAGE_SIZE;
@@ -168,19 +219,22 @@ function renderPage() {
   slice.forEach(row => {
     let beforeObj = null, afterObj = null;
     try { beforeObj = row.before ? JSON.parse(row.before) : null; } catch {}
-    try { afterObj = row.after ? JSON.parse(row.after) : null; } catch {}
+    try { afterObj  = row.after  ? JSON.parse(row.after)  : null; } catch {}
 
-    const beforePicked = pickFields(beforeObj);
-    const afterPicked  = pickFields(afterObj);
-    const changed = diffKeys(beforePicked || {}, afterPicked || {});
+    const beforePicked = pickReadableFields(beforeObj);
+    const afterPicked  = pickReadableFields(afterObj);
+    const changed      = diffKeys(beforePicked || {}, afterPicked || {});
 
     const card = document.createElement('div');
     card.className = 'log-card';
 
+    const who = row.user_name ?? row.user_id ?? 'N/A';
+    const ent = row.entity ? ` • ${row.entity}${row.entity_id ? ` #${row.entity_id}`:''}` : '';
+
     card.innerHTML = `
       <div class="log-meta">
         <span class="${pillClass(row.action)}">${row.action || 'event'}</span>
-        <span class="pill">User ID: ${row.userId ?? 'N/A'}</span>
+        <span class="pill">By: ${who}${ent}</span>
         <span class="pill">${fmtDateTime(row.timestamp)}</span>
       </div>
       <div class="snapshot before"></div>
@@ -201,6 +255,9 @@ function renderPage() {
 
 // ------- Init -------
 async function init() {
+  await resolveTableName();
+  await fetchDistinctActions();
+
   logsEl.innerHTML = `<div class="no-results">Loading…</div>`;
   const rows = await fetchEvents();
   cache = applyFilters(rows);
