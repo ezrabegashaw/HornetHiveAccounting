@@ -87,7 +87,6 @@ function addJournalRow() {
   const accountSelect = document.createElement("select");
   accountSelect.className = "accountSelect";
   accountSelect.innerHTML = `<option value="">Select account</option>`;
-  // fill options (we'll prune after we append the row)
   accountOptions.forEach(a => {
     const opt = document.createElement("option");
     opt.value = String(a.account_id);
@@ -126,32 +125,33 @@ function addJournalRow() {
   row.append(td1, td2, td3, td4, td5);
   tbody.appendChild(row);
 
-  // When any value changes, re-validate and refresh account options
+  // Keep UX nicetight but DO NOT show errors while editing
   accountSelect.addEventListener("change", () => {
     refreshAccountSelectOptions();
-    validateJournal(); // live validation feedback
   });
-  debit.addEventListener("input", () => validateJournal());
-  credit.addEventListener("input", () => validateJournal());
-  desc.addEventListener("input", () => validateJournal());
+  debit.addEventListener("input", () => {/* no live errors */});
+  credit.addEventListener("input", () => {/* no live errors */});
+  desc.addEventListener("input", () => {/* no live errors */});
 
   removeBtn.addEventListener("click", () => {
     row.remove();
     refreshAccountSelectOptions();
-    validateJournal();
   });
 
   // After adding a new row, prune duplicates from dropdowns
   refreshAccountSelectOptions();
 }
 
-
 function resetJournal() {
   const tbody = document.getElementById("journalTableBody");
   tbody.innerHTML = "";
   addJournalRow();
-  validateJournal();
+
+  // Hide any previous error box
+  const box = document.getElementById("journalErrors");
+  if (box) { box.style.display = "none"; box.innerHTML = ""; }
 }
+
 function getAllRows() {
   return Array.from(document.querySelectorAll("#journalTableBody tr"));
 }
@@ -178,28 +178,22 @@ function refreshAccountSelectOptions() {
     if (!sel) return;
     const current = sel.value;
 
-    // rebuild sel options from accountOptions while removing other rows' selections
     const taken = new Set(selected.filter(id => id !== current));
-
-    // Remember current scroll/selection to keep UX smooth
     const previous = current;
 
-    // Rebuild
     sel.innerHTML = `<option value="">Select account</option>`;
     accountOptions.forEach(a => {
       const id = String(a.account_id);
-      if (taken.has(id)) return; // hide account if used in another row
+      if (taken.has(id)) return;
       const opt = document.createElement("option");
       opt.value = id;
       opt.textContent = a.account_name;
       sel.appendChild(opt);
     });
 
-    // Restore current if still allowed; if not, keep empty
     if (previous && Array.from(sel.options).some(o => o.value === previous)) {
       sel.value = previous;
     } else if (previous) {
-      // previously-selected value got taken by another row — clear it
       sel.value = "";
     }
   });
@@ -210,17 +204,16 @@ function refreshAccountSelectOptions() {
  * Rules:
  *  - At least 1 row
  *  - Each row: one side only (debit XOR credit), amount > 0
- *  - No duplicate accounts (server-side checked too, but enforced here)
- *  - Debits must equal credits (sum)
- * Displays errors in #journalErrors (red)
+ *  - No duplicate accounts
+ *  - Debits must equal credits
  * Returns { ok: boolean, errors: string[] }
+ * If render=true, displays errors in #journalErrors (red). If false, stays silent.
  */
-function validateJournal() {
+function validateJournal(render = false) {
   const errors = [];
   const rows = getAllRows();
   const errorBox = document.getElementById("journalErrors");
 
-  // no rows
   if (!rows.length) {
     errors.push("Add at least one journal line.");
   }
@@ -239,23 +232,19 @@ function validateJournal() {
     const d = parseFloat(debitEl?.value || "0") || 0;
     const c = parseFloat(creditEl?.value || "0") || 0;
 
-    // must pick account
     if (!accountId) {
       errors.push(`Line ${lineNum}: select an account.`);
     }
 
-    // exactly one side, positive
     const hasDebit = d > 0;
     const hasCredit = c > 0;
     if ((hasDebit && hasCredit) || (!hasDebit && !hasCredit)) {
       errors.push(`Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`);
     }
 
-    // track sums
     totalDebit += d;
     totalCredit += c;
 
-    // duplicates: if already seen, flag (we also hide in dropdowns, but this guards against HTML edits)
     if (accountId) {
       if (seenAccounts.has(accountId)) {
         errors.push(`Line ${lineNum}: account is used more than once in this entry.`);
@@ -265,7 +254,6 @@ function validateJournal() {
     }
   });
 
-  // balance check (only if we have lines)
   if (rows.length) {
     const d = Number(totalDebit.toFixed(2));
     const c = Number(totalCredit.toFixed(2));
@@ -274,15 +262,14 @@ function validateJournal() {
     }
   }
 
-  // render errors
-  if (errorBox) {
+  // Only render if asked (on Submit)
+  if (render && errorBox) {
     if (errors.length) {
       errorBox.style.display = "block";
       errorBox.innerHTML = `
         <div class="title">Please fix the following:</div>
         <ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul>
       `;
-      // scroll into view for visibility
       errorBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else {
       errorBox.style.display = "none";
@@ -293,10 +280,9 @@ function validateJournal() {
   return { ok: errors.length === 0, errors };
 }
 
-
 async function submitJournalEntry() {
-  // ✅ Hard block if validation fails; shows red messages automatically
-  const { ok } = validateJournal();
+  // ✅ Only show errors now (on submit)
+  const { ok } = validateJournal(true);
   if (!ok) return;
 
   const rows = document.querySelectorAll("#journalTableBody tr");
@@ -329,7 +315,6 @@ async function submitJournalEntry() {
     .single();
 
   if (entryError || !entryData) {
-    // surface in red box
     const box = document.getElementById("journalErrors");
     if (box) {
       box.style.display = "block";
@@ -367,7 +352,6 @@ async function submitJournalEntry() {
   alert(`Journal entry ${initialStatus === "approved" ? "saved & approved" : "submitted for approval"}!`);
   loadJournalEntries(true);
 }
-
 
 async function approveEntry(entryId) {
   const { error: upErr } = await db
@@ -426,7 +410,7 @@ async function postApprovedEntryToLedger(entryId) {
       const newBal = Number((currentBal + delta).toFixed(2));
 
       await db.from("ledger").insert([{
-        journal_entry_id: entryId,                // <-- PR back-link
+        journal_entry_id: entryId,
         account_number: acc.account_number,
         account_name: acc.account_name,
         date: entry.date,
@@ -446,7 +430,6 @@ async function postApprovedEntryToLedger(entryId) {
 // Load journal entries (filters + search)
 // -------------------------
 async function loadJournalEntries(showAll) {
-  // Read filters (exist only on the normal page, not in detail view)
   const status = showAll ? "all" : (document.getElementById("statusFilter")?.value || "all");
   const startDate = document.getElementById("startDate")?.value || "";
   const endDate   = document.getElementById("endDate")?.value   || "";
@@ -486,7 +469,6 @@ async function loadJournalEntries(showAll) {
 
   let rows = data || [];
 
-  // client-side search: account name, amount, or date
   if (search) {
     const isNumeric = !isNaN(Number(search));
     rows = rows.filter(e => {
@@ -550,41 +532,31 @@ async function loadJournalEntries(showAll) {
 // -------------------------
 // PR deep-link: show ONLY the single journal
 // -------------------------
-// -------------------------
-// PR deep-link: show ONLY the single journal
-// -------------------------
 async function renderJournalDetailOnly(entryId) {
-  // Remove the “Submitted Journal Entries” section & the compose buttons
   document.getElementById("submittedSection")?.remove();
   document.querySelector(".form-actions")?.remove();
 
-  // Retitle the page
   const topTitle = document.getElementById("journalTopTitle");
   if (topTitle) topTitle.textContent = `Journal Entry #${entryId}`;
   document.title = `Journal Entry #${entryId}`;
 
-  // Show & wire up Back button
   const backBtn = document.getElementById("backToLedgerBtn");
   if (backBtn) {
     backBtn.style.display = "inline-block";
     backBtn.addEventListener("click", (e) => {
       e.preventDefault();
       const params = new URLSearchParams(window.location.search);
-      const accountId = params.get("account_id"); // passed from ledger when we add it (see step C)
+      const accountId = params.get("account_id");
       if (window.history.length > 1) {
-        // Most cases: you clicked from ledger, so this goes back exactly where you were
         window.history.back();
       } else if (accountId) {
-        // Opened in a new tab with account_id available — go straight to that ledger
         window.location.href = `ledger.html?account_id=${encodeURIComponent(accountId)}`;
       } else {
-        // Fallback if no history and no account hint
         window.location.href = "ledger.html";
       }
     });
   }
 
-  // Render the entry lines (read-only)
   const tbody = document.getElementById("journalTableBody");
   tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Loading entry...</td></tr>`;
 
@@ -614,7 +586,6 @@ async function renderJournalDetailOnly(entryId) {
   });
 }
 
-
 function actionButtons(entryId) {
   return `
     <div style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">
@@ -638,5 +609,4 @@ document.addEventListener("click", e => {
     window.prompt = () => comment;
     rejectEntry(entryId).finally(() => { window.prompt = originalPrompt; });
   }
-}
-);
+});
