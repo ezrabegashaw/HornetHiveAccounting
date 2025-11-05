@@ -125,13 +125,13 @@ function addJournalRow() {
   row.append(td1, td2, td3, td4, td5);
   tbody.appendChild(row);
 
-  // Keep UX nicetight but DO NOT show errors while editing
+  // Keep UX nice & quiet while editing (no live error spam)
   accountSelect.addEventListener("change", () => {
     refreshAccountSelectOptions();
   });
-  debit.addEventListener("input", () => {/* no live errors */});
-  credit.addEventListener("input", () => {/* no live errors */});
-  desc.addEventListener("input", () => {/* no live errors */});
+  debit.addEventListener("input", () => {});
+  credit.addEventListener("input", () => {});
+  desc.addEventListener("input", () => {});
 
   removeBtn.addEventListener("click", () => {
     row.remove();
@@ -206,6 +206,7 @@ function refreshAccountSelectOptions() {
  *  - Each row: one side only (debit XOR credit), amount > 0
  *  - No duplicate accounts
  *  - Debits must equal credits
+ *  - **Debits must be listed first** (no Debit after any Credit)
  * Returns { ok: boolean, errors: string[] }
  * If render=true, displays errors in #journalErrors (red). If false, stays silent.
  */
@@ -221,6 +222,9 @@ function validateJournal(render = false) {
   const seenAccounts = new Set();
   let totalDebit = 0;
   let totalCredit = 0;
+
+  // Track ordering: once we see any Credit line, no later Debit lines are allowed
+  let seenCreditAlready = false;
 
   rows.forEach((row, idx) => {
     const lineNum = idx + 1;
@@ -238,8 +242,17 @@ function validateJournal(render = false) {
 
     const hasDebit = d > 0;
     const hasCredit = c > 0;
+
     if ((hasDebit && hasCredit) || (!hasDebit && !hasCredit)) {
       errors.push(`Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`);
+    }
+
+    // Enforce "Debits must be listed first"
+    // If we've already seen a credit line, any later debit line is invalid
+    if (hasCredit) {
+      seenCreditAlready = true;
+    } else if (hasDebit && seenCreditAlready) {
+      errors.push(`Line ${lineNum}: Debits must be listed before credits. Move this debit line above all credit lines.`);
     }
 
     totalDebit += d;
