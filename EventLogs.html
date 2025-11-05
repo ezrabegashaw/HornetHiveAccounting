@@ -29,13 +29,13 @@
     }
     .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select, .toolbar button{
       padding:.45rem .6rem; border:1px solid var(--line); border-radius:8px; background:#fff;
-      color:#111827; /* ensure text shows (fix "blank" look) */
+      color:#111827; /* ensure visible text */
     }
     .toolbar button{ cursor:pointer }
     .toolbar button#apply{ border-color:var(--brand) }
     .toolbar button#clear{ border-color:#cbd5e1 }
 
-    /* Header row describing columns */
+    /* Column headers */
     .logs-head{
       display:grid;
       grid-template-columns: 260px 1fr 1fr;
@@ -48,10 +48,9 @@
       text-transform:uppercase;
     }
 
-    /* Container for rows */
     #logs{ display:block; }
 
-    /* Each log line (horizontal row) */
+    /* Each log row */
     .log-card{
       display:grid;
       grid-template-columns: 260px 1fr 1fr;
@@ -63,7 +62,6 @@
     }
     .log-card:hover{ background:var(--bg-alt); }
 
-    /* Left meta column */
     .log-meta{ display:flex; flex-direction:column; gap:.35rem; font-size:.95rem; }
     .log-meta .pill{
       display:inline-block;
@@ -80,9 +78,8 @@
     .log-meta .pill.deactivate{ color:var(--deact); background:#fef2f2 }
     .meta-line{ color:var(--muted); font-size:.9rem }
 
-    /* Snapshot columns */
     .snapshot{ background:transparent; border:0; padding:0; }
-    .snapshot h4{ display:none } /* we already have column headers above */
+    .snapshot h4{ display:none }
 
     .kv{
       display:grid;
@@ -99,23 +96,17 @@
     }
     .empty{ color:#9ca3af; font-style:italic }
 
-    /* No results */
     .no-results{ text-align:center; color:#666; padding:2rem 1rem }
 
-    /* Pager */
     .paginate{ display:flex; justify-content:center; gap:.5rem; margin-top:1rem }
     .paginate button{
       padding:.45rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer;
       color:#111827;
     }
 
-    /* Responsive: stack columns */
     @media (max-width: 900px){
       .logs-head{ display:none; }
-      .log-card{
-        grid-template-columns: 1fr;
-        gap:.5rem;
-      }
+      .log-card{ grid-template-columns: 1fr; gap:.5rem; }
       .kv{ grid-template-columns: 130px 1fr; }
     }
   </style>
@@ -162,10 +153,10 @@
     <div class="header">
       <h1>Event Logs</h1>
       <div class="toolbar">
-        <input id="q" type="text" placeholder="Search (entity, id, name, user)…"/>
+        <input id="q" type="text" placeholder="Search (entity, name, user)…"/>
         <select id="actionFilter">
           <option value="">All actions</option>
-          <!-- will be populated dynamically with distinct actions -->
+          <!-- filled dynamically -->
         </select>
         <label>From <input id="fromDate" type="date"/></label>
         <label>To <input id="toDate" type="date"/></label>
@@ -174,14 +165,12 @@
       </div>
     </div>
 
-    <!-- Column headers -->
     <div class="logs-head">
       <div>Action / Entity / User / Time</div>
       <div>Before</div>
       <div>After</div>
     </div>
 
-    <!-- Logs -->
     <div id="logs">
       <div class="no-results">Loading…</div>
     </div>
@@ -194,13 +183,11 @@
   </main>
 </div>
 
-<!-- Supabase + auth bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script type="module" src="eventLogs.js"></script>
 
 <script>
-  // Optional Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
     localStorage.removeItem('username');
