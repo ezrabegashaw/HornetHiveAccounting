@@ -41,19 +41,26 @@ app.post('/signup', async (req, res) => {
 
     if (existingUser) return res.status(400).json({ error: 'Email already registered' });
 
-    // ✅ Hash the password before saving
+    // Hash the password before saving
     const hashedPassword = await bcrypt.hash(user.password, 12);
-    await supabaseAdmin.from('users').insert([{ ...user, password_hash: hashedPassword }]);
 
+    // Generate password freshness dates
+    const now = new Date();
+    const password_fresh = now.toISOString();
+    const password_expire = new Date(now);
+    password_expire.setMonth(password_expire.getMonth() + 1);
 
-    // Insert new user with hashed password and approved: false
+    // Insert into users table
     const { error } = await supabaseAdmin
       .from('users')
-      .insert([{ 
+      .insert([{
         ...user,
-        password: hashedPassword,   // save hashed password
-        approved: false
+        password: hashedPassword,
+        approved: false,
+        password_fresh: password_fresh,
+        password_expire: password_expire.toISOString()
       }]);
+
 
     if (error) throw error;
 
