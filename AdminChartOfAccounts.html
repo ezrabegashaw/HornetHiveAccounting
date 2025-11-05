@@ -11,14 +11,27 @@
   <style>
     .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000}
     .popup-overlay.show{display:flex}
-    .popup-card{background:#fff;border-radius:12px;max-width:860px;width:95%;padding:1rem}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
-    .form-actions{display:flex;gap:.5rem;justify-content:flex-end}
+    .popup-card{background:#fff;border-radius:12px;max-width:620px;width:95%;padding:1rem 1.25rem 1.25rem}
+
+    /* ✅ Single-column, vertical form layout for Add Account */
+    .form-vertical{display:flex;flex-direction:column;gap:.75rem}
+    .form-vertical .field{display:flex;flex-direction:column;gap:.35rem}
+    .form-vertical label{font-weight:600}
+    .form-vertical input,
+    .form-vertical select,
+    .form-vertical textarea{
+      padding:.55rem .6rem;border:1px solid #e5e7eb;border-radius:8px;width:100%;
+      background:#fff; min-height:40px;
+    }
+    .form-vertical textarea{min-height:80px; resize:vertical}
+
+    .form-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.35rem}
+    .button,.btn,button{cursor:pointer}
+
     /* legacy popup (unused now) */
     .ledger-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:999}
     .ledger-popup .ledger-card{background:#fff;border-radius:12px;max-width:900px;width:95%;padding:1rem}
     .ledger-close{float:right}
-    .button,.btn,button{cursor:pointer}
     a.link{ color:#0a58ca; text-decoration:underline; }
   </style>
 </head>
@@ -114,37 +127,61 @@
   </div>
 </div>
 
-<!-- Add Account Popup -->
+<!-- ✅ Add Account Popup (single column) -->
 <div id="popupOverlay" class="popup-overlay">
   <div class="popup-card card">
     <h2 class="popup-title">Add New Account</h2>
-    <form id="accountForm" novalidate>
-      <div class="grid">
-        <div><label>Account Name</label><input type="text" id="account_name" required></div>
-        <div><label>Account Number</label><input type="text" id="account_number" required inputmode="numeric" pattern="^[0-9]+$"></div>
-        <div><label>Normal Side</label>
-          <select id="normal_side" required>
-            <option value="">Select...</option>
-            <option value="Debit">Debit</option>
-            <option value="Credit">Credit</option>
-          </select>
-        </div>
-        <div><label>Category</label><input type="text" id="account_category" required></div>
-        <div><label>Subcategory</label><input type="text" id="account_subcategory"></div>
-        <div><label>Initial Balance</label><input type="number" id="initial_balance" step="0.01" value="0.00"></div>
-        <div><label>Order</label><input type="text" id="account_order" placeholder="e.g. 01"></div>
-        <div>
-          <label>Statement Type</label>
-          <select id="statement_type" required>
-            <option value="">Select...</option>
-            <option value="IS">Income Statement</option>
-            <option value="BS">Balance Sheet</option>
-            <option value="RE">Retained Earnings</option>
-          </select>
-        </div>
+    <form id="accountForm" class="form-vertical" novalidate>
+      <div class="field">
+        <label for="account_name">Account Name</label>
+        <input type="text" id="account_name" required>
       </div>
-      <div class="mb-3"><label>Description</label><textarea id="account_description" rows="2"></textarea></div>
-      <div class="mb-3"><label>Comment</label><textarea id="comment" rows="2"></textarea></div>
+      <div class="field">
+        <label for="account_number">Account Number</label>
+        <input type="text" id="account_number" required inputmode="numeric" pattern="^[0-9]+$">
+      </div>
+      <div class="field">
+        <label for="normal_side">Normal Side</label>
+        <select id="normal_side" required>
+          <option value="">Select...</option>
+          <option value="Debit">Debit</option>
+          <option value="Credit">Credit</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="account_category">Category</label>
+        <input type="text" id="account_category" required>
+      </div>
+      <div class="field">
+        <label for="account_subcategory">Subcategory</label>
+        <input type="text" id="account_subcategory">
+      </div>
+      <div class="field">
+        <label for="initial_balance">Initial Balance</label>
+        <input type="number" id="initial_balance" step="0.01" value="0.00">
+      </div>
+      <div class="field">
+        <label for="account_order">Order</label>
+        <input type="text" id="account_order" placeholder="e.g. 01">
+      </div>
+      <div class="field">
+        <label for="statement_type">Statement Type</label>
+        <select id="statement_type" required>
+          <option value="">Select...</option>
+          <option value="IS">Income Statement</option>
+          <option value="BS">Balance Sheet</option>
+          <option value="RE">Retained Earnings</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="account_description">Description</label>
+        <textarea id="account_description" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label for="comment">Comment</label>
+        <textarea id="comment" rows="2"></textarea>
+      </div>
+
       <div class="form-actions popup-actions">
         <button type="submit" id="saveAccountBtn">Save Account</button>
         <button type="button" class="button cancel-btn" id="closePopup">Cancel</button>
@@ -157,8 +194,8 @@
 <div id="deactivatePopupOverlay" class="popup-overlay">
   <div class="popup-card card">
     <h2 class="popup-title">Deactivate Account</h2>
-    <form id="deactivateForm">
-      <div class="mb-3">
+    <form id="deactivateForm" class="form-vertical">
+      <div class="field">
         <label for="deactivateAccountSelect">Select Account</label>
         <select id="deactivateAccountSelect" required>
           <option value="">-- Select an Account --</option>
