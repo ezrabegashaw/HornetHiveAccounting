@@ -75,63 +75,66 @@ async function signupUser(data) {
    LOGIN by USERNAME
    Used by HornetHiveLogin.html after you switched inputs to username
 ------------------------------------------------------------------*/
+// auth.js
 async function loginUserByUsername(username, password) {
-  const { data, error } = await supabaseClient
-    .from("users")
-    .select(
-      "id, first_name, last_name, email, username, role, active, approved, password"
-    )
-    .eq("username", username)
-    .single();
-
-  // If Supabase returns "no rows" (user not found)
-  if (error && error.code === "PGRST116") {
-    return { user: null, error: { message: "No account found with that username" } };
-  }
-
-  // Handle other Supabase errors
-  if (error) {
-    console.error("Supabase error:", error);
-    return { user: null, error: { message: "Unexpected login error. Please try again later." } };
-  }
-
   // === 1. Track failed login attempts per username ===
   const attemptsKey = `attempts_${username}`;
   let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
 
-  // === 2. Handle first-time unapproved users ===
-  if (!data.approved) {
-    window.location.href = "PendingPage.html";
-    return { user: null, error: { message: "Awaiting approval" } };
-  }
+  try {
+    // === 2. Send credentials to backend ===
+    const response = await fetch("http://localhost:3000/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-  // === 3. Handle wrong password ===
-  if (data.password !== password) {
-    attempts++;
-    localStorage.setItem(attemptsKey, attempts);
+    const result = await response.json();
 
-    // After 3 failed attempts → lock the account
-    if (attempts >= 3) {
-      await supabaseClient
-        .from("users")
-        .update({ approved: false })
-        .eq("username", username);
+    // === 3. Handle errors ===
+    if (!response.ok) {
+      // Server says account is pending approval
+      if (response.status === 403 && result.error?.includes("approval")) {
+        window.location.href = "PendingPage.html";
+        return { user: null, error: { message: "Awaiting approval" } };
+      }
 
-      localStorage.removeItem(attemptsKey);
-      return { user: null, error: { message: "Account locked due to too many failed attempts." } };
+      // Increment attempts for wrong password
+      if (response.status === 401 && result.error?.includes("password")) {
+        attempts++;
+        localStorage.setItem(attemptsKey, attempts);
+
+        // After 3 failed attempts, lock the account in Supabase
+        if (attempts >= 3) {
+          await fetch("http://localhost:3000/lock-account", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username }),
+          });
+
+          localStorage.removeItem(attemptsKey);
+          return { user: null, error: { message: "Account locked due to too many failed attempts." } };
+        }
+
+        return {
+          user: null,
+          error: { message: `Incorrect password. Attempt ${attempts} of 3.` },
+        };
+      }
+
+      // Other errors
+      return { user: null, error: { message: result.error || "Unexpected login error." } };
     }
 
-    return {
-      user: null,
-      error: { message: `Incorrect password. Attempt ${attempts} of 3.` },
-    };
+    // === 4. Success ===
+    localStorage.removeItem(attemptsKey);
+    return { user: result.user, error: null };
+  } catch (err) {
+    console.error("Login error:", err);
+    return { user: null, error: { message: "Network or server error. Please try again later." } };
   }
-
-  // === 4. Success ===
-  localStorage.removeItem(attemptsKey);
-  const { password: _drop, ...user } = data; // exclude password
-  return { user, error: null };
 }
+
 
 
 /* ----------------------------------------------------------------

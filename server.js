@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 12;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,16 +41,25 @@ app.post('/signup', async (req, res) => {
 
     if (existingUser) return res.status(400).json({ error: 'Email already registered' });
 
-    // Insert new user with approved: false
+    // ✅ Hash the password before saving
+    const hashedPassword = await bcrypt.hash(user.password, 12);
+    await supabaseAdmin.from('users').insert([{ ...user, password_hash: hashedPassword }]);
+
+
+    // Insert new user with hashed password and approved: false
     const { error } = await supabaseAdmin
       .from('users')
-      .insert([{ ...user, approved: false }]);
+      .insert([{ 
+        ...user,
+        password: hashedPassword,   // save hashed password
+        approved: false
+      }]);
 
     if (error) throw error;
 
-    // Send admin approval email
+    // Send admin approval email (unchanged)
     const approveLink = `http://localhost:${PORT}/approve?email=${encodeURIComponent(user.email)}`;
-    const rejectLink = `http://localhost:${PORT}/reject?email=${encodeURIComponent(user.email)}`;
+    const rejectLink  = `http://localhost:${PORT}/reject?email=${encodeURIComponent(user.email)}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -187,6 +198,57 @@ app.post("/api/update-password", async (req, res) => {
     res.status(500).json({ message: "Server error updating password." });
   }
 });
+
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const { data: user, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("username", username)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ error: "No account found with that username" });
+    }
+
+    if (!user.approved) {
+      return res.status(403).json({ error: "Account awaiting approval" });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash || user.password);
+    if (!valid) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    const { password: _drop, password_hash, ...safeUser } = user;
+    res.json({ user: safeUser });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Server error logging in" });
+  }
+});
+
+app.post("/lock-account", async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ approved: false })
+      .eq("username", username);
+
+    if (error) throw error;
+
+    res.json({ message: "Account locked successfully" });
+  } catch (err) {
+    console.error("Error locking account:", err);
+    res.status(500).json({ error: "Failed to lock account" });
+  }
+});
+
+
 
 // Start Server 
 app.listen(PORT, () => {
