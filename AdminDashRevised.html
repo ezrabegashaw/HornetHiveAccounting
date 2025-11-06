@@ -64,5 +64,31 @@
   if (typeof initRBAC === 'function') initRBAC();
 </script>
 
+<!-- Load Supabase library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const username = localStorage.getItem("username");
+    if (!username) return;
+
+    const { data } = await supabaseClient
+      .from("users")
+      .select("password_expire")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (!data?.password_expire) return;
+
+    const expireDate = new Date(data.password_expire);
+    alert(`⚠️ Your password is set to expire on ${expireDate.toDateString()}`);
+  });
+</script>
+
+
 </body>
 </html>
