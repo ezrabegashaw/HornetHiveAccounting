@@ -85,7 +85,16 @@
     if (!data?.password_expire) return;
 
     const expireDate = new Date(data.password_expire);
-    alert(`⚠️ Your password is set to expire on ${expireDate.toDateString()}`);
+    const today = new Date();
+
+    // Calculate difference in days
+    const diffTime = expireDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Show alert if within 3 days and not expired yet
+    if (diffDays > 0 && diffDays <= 3) {
+      alert(`⚠️ Your password is set to expire on ${expireDate.toDateString()}`);
+    }
   });
 </script>
 
