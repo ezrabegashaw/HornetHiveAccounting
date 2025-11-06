@@ -1,0 +1,255 @@
+/* messages.css
+   Styling for notification bell, dropdown, and message modal
+*/
+
+/* Topbar right cluster */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Notification bell wrapper */
+.notification-wrapper {
+  position: relative;
+}
+
+/* Bell button */
+.notif-bell {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-bell img {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+/* Red badge for unread count */
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  display: none; /* hidden when no unread */
+}
+
+/* Dropdown container */
+.notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: 32px;
+  width: 320px;
+  max-height: 360px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  display: none;
+  z-index: 9999;
+}
+
+/* Dropdown header */
+.notif-header {
+  background: var(--green-dark);
+  color: #fff;
+  font-weight: 700;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+/* List */
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notif-empty {
+  padding: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+/* Notification item */
+.notif-item {
+  display: block;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: #fff;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item:hover {
+  background: #f1f5f9;
+}
+
+/* Unread highlight */
+.notif-item.unread {
+  background: #e8f5ee;
+}
+
+/* Sender / time line */
+.notif-top-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.notif-sender {
+  font-weight: 600;
+  color: #111827;
+}
+
+.notif-time {
+  font-size: 11px;
+}
+
+/* Subject line */
+.notif-subject {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+/* Preview line */
+.notif-preview {
+  font-size: 13px;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== Message Modal ===== */
+.message-modal {
+  position: fixed;
+  inset: 0;
+  display: none; /* toggled via JS */
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+}
+
+.message-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 95%;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  padding: 16px 18px 18px;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.message-subject {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.message-body {
+  font-size: 14px;
+  color: #111827;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f9fafb;
+  margin-bottom: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* Reply area */
+.message-reply label {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.message-reply textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 10px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Small screen tweaks */
+@media (max-width: 480px) {
+  .notif-dropdown {
+    width: 260px;
+  }
+  /* Dropdown z-index and position fix */
+.notif-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 48px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 280px;
+  padding: 8px 0;
+}
+
+.notification-wrapper { position: relative; }
+
+.notif-bell img { filter: brightness(0) invert(1); } /* keep white icon */
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: red;
+  color: white;
+  font-size: 11px;
+  border-radius: 50%;
+  padding: 2px 6px;
+}
+
+}
