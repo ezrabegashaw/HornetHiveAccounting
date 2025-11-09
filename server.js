@@ -48,7 +48,7 @@ app.post('/signup', async (req, res) => {
     const now = new Date();
     const password_fresh = now.toISOString();
     const password_expire = new Date(now);
-    password_expire.setMonth(password_expire.getMonth() + 1);
+    password_expire.setMonth(password_expire.getMonth() + 3);
 
     // Insert into users table
     const { error } = await supabaseAdmin
