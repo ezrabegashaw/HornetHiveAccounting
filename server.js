@@ -56,11 +56,11 @@ app.post('/signup', async (req, res) => {
       .insert([{
         ...user,
         password: hashedPassword,
+        old_password_plain: user.password, // ✅ Add this line
         approved: false,
-        password_fresh: password_fresh,
+        password_fresh,
         password_expire: password_expire.toISOString()
       }]);
-
 
     if (error) throw error;
 
@@ -165,10 +165,10 @@ app.post("/api/update-password", async (req, res) => {
   }
 
   try {
-    // Fetch current password and old_passwords
+    // Fetch current password + old_password_plain + old_passwords
     const { data: user, error: fetchError } = await supabaseAdmin
       .from("users")
-      .select("password, old_passwords")
+      .select("password, old_password_plain, old_passwords")
       .eq("email", email)
       .eq("username", username)
       .single();
@@ -176,26 +176,27 @@ app.post("/api/update-password", async (req, res) => {
     if (fetchError) throw fetchError;
     if (!user) return res.status(404).json({ message: "No matching user found." });
 
-    const previousPasswords = user.old_passwords || [];
+    // Initialize or clone old_passwords array
+    let updatedOldPasswords = user.old_passwords || [];
 
-    // Prevent reusing old passwords
-    if (previousPasswords.includes(newPassword) || user.password === newPassword) {
-      return res.status(400).json({ message: "You cannot reuse a previous password." });
+    // Store the current plaintext (if exists) into history
+    if (user.old_password_plain) {
+      updatedOldPasswords.push(user.old_password_plain);
     }
 
-    // Append current password to old_passwords (keep last 5)
-    const updatedOldPasswords = [...previousPasswords, user.password].slice(-5);
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
-    // Update password and old_passwords
-    const { data, error: updateError } = await supabaseAdmin
+    // Update record: new hashed + new plaintext + old passwords
+    const { error: updateError } = await supabaseAdmin
       .from("users")
       .update({
-        password: newPassword,           // TODO: consider hashing
-        old_passwords: updatedOldPasswords
+        password: hashedPassword,        // store hashed version
+        old_password_plain: newPassword, // store plaintext version
+        old_passwords: updatedOldPasswords // append previous plaintexts
       })
       .eq("email", email)
-      .eq("username", username)
-      .select();
+      .eq("username", username);
 
     if (updateError) throw updateError;
 
@@ -205,6 +206,7 @@ app.post("/api/update-password", async (req, res) => {
     res.status(500).json({ message: "Server error updating password." });
   }
 });
+
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
