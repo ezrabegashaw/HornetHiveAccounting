@@ -102,9 +102,15 @@
         <input id="editActive" type="checkbox">
         <!-- hidden native submit kept to ensure form.requestSubmit() triggers form's submit event -->
         <input id="hiddenEditSubmit" type="submit" value="Submit" style="display:none">
+        <label>Suspend User:</label>
+        <div class="suspend-dates">
+          <label>Start:</label>
+          <input id="editSuspendStart" type="date">
+          <label>End:</label>
+          <input id="editSuspendEnd" type="date">
+        </div>
       </form>
       
-
       <div class="popup-buttons">
         <button id="saveButton" type="button">Save</button>
         <button class='popup-cancel' id="cancelButton">Cancel</button>
@@ -231,7 +237,10 @@
       document.getElementById('editLastName').value = user.last_name;
       document.getElementById('editRole').value = user.role;
       document.getElementById('editActive').checked = user.active;
-      
+
+      document.getElementById('editSuspendStart').value = user.suspend_start || '';
+      document.getElementById('editSuspendEnd').value = user.suspend_end || '';
+
       // Show the popup
       document.getElementById('popupOverlay').style.display = 'block';
       document.getElementById('editPopup').style.display = 'block';
@@ -241,12 +250,23 @@
       form.onsubmit = async (e) => {
           e.preventDefault();
           const updates = {
-              first_name: document.getElementById('editFirstName').value,
-              last_name: document.getElementById('editLastName').value,
-              role: document.getElementById('editRole').value,
-              active: document.getElementById('editActive').checked
+            first_name: document.getElementById('editFirstName').value,
+            last_name: document.getElementById('editLastName').value,
+            role: document.getElementById('editRole').value,
+            active: document.getElementById('editActive').checked,
+            suspend_start: document.getElementById('editSuspendStart').value || null,
+            suspend_end: document.getElementById('editSuspendEnd').value || null
           };
-      
+
+          const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+          if (updates.suspend_start && updates.suspend_end) {
+            if (today >= updates.suspend_start && today <= updates.suspend_end) {
+              updates.active = false;
+            } else {
+              updates.active = true;
+            }
+          }
+
           const success = await updateUser(user.id, updates);
           if (success) {
               await getUsers(); // Refresh the table with updated data
@@ -270,22 +290,25 @@
   }
   //Updates users information
   async function updateUser(userID, updates) {
-    const {error} = await supabaseClient
-    .from('users')
-    .update({
-      first_name: updates.first_name,
-      last_name: updates.last_name,
-      role: updates.role,
-      active: updates.active
-    })
-    .eq('id', userID);
+    const { error } = await supabaseClient
+      .from('users')
+      .update({
+        first_name: updates.first_name,
+        last_name: updates.last_name,
+        role: updates.role,
+        active: updates.active,
+        suspend_start: updates.suspend_start,
+        suspend_end: updates.suspend_end
+      })
+      .eq('id', userID);
 
     if (error) {
-      console.error("Error approving user:", error);
+      console.error("Error updating user:", error);
       return false;
     }
     return true;
   }
+
 
   //Deletes the user from the database
   async function deleteUser(userID) {
