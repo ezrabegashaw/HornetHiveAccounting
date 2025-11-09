@@ -156,6 +156,71 @@ app.get('/reject', async (req, res) => {
   }
 });
 
+// ===================== Admin Send Email Route =====================
+app.post("/api/send-email", async (req, res) => {
+  const { to, subject, message } = req.body;
+
+  if (!to || !subject || !message) {
+    return res.status(400).json({ error: "Recipient, subject, and message are required." });
+  }
+
+  try {
+    // Optional: Check if "to" is a real user in your users table
+    const { data: user, error: userError } = await supabaseAdmin
+      .from("users")
+      .select("email")
+      .eq("email", to)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: "No user found with that email." });
+    }
+
+    // Send the email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER, // your system email
+      to,
+      subject,
+      text: message,
+    });
+
+    res.json({ message: "Email sent successfully!" });
+  } catch (err) {
+    console.error("Error sending email:", err);
+    res.status(500).json({ error: "Failed to send email." });
+  }
+});
+
+
+app.post("/send-email", async (req, res) => {
+  const { emailTo, subject, body } = req.body;
+
+  if (!emailTo || !subject || !body)
+    return res.status(400).json({ error: "Missing fields" });
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.ADMIN_EMAIL, // your admin email
+        pass: process.env.EMAIL_PASS,  // your app password
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"HornetHive Admin" <${process.env.ADMIN_EMAIL}>`,
+      to: emailTo,
+      subject,
+      text: body,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ error: "Failed to send email" });
+  }
+});
+
 // ===================== Update Password Route =====================
 app.post("/api/update-password", async (req, res) => {
   const { email, username, newPassword } = req.body;
