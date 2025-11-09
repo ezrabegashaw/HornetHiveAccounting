@@ -162,6 +162,7 @@
         <label>To <input id="toDate" type="date"/></label>
         <button id="apply">Apply</button>
         <button id="clear">Clear</button>
+        <button id="viewExpired">View Expired Passwords</button>
       </div>
     </div>
 
@@ -180,6 +181,22 @@
       <span id="pageInfo" style="min-width:8ch; text-align:center;"></span>
       <button id="nextPage" disabled>Next</button>
     </div>
+
+    <!-- Popup overlay for expired passwords -->
+    <div id="expiredPopup" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); 
+        backdrop-filter:blur(2px); align-items:center; justify-content:center; z-index:9999;">
+      <div style="background:#fff; padding:1.5rem; border-radius:12px; width:600px; max-height:80vh; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+        <h2 style="margin-top:0;">Expired Passwords</h2>
+        <div id="expiredList" style="margin-top:1rem; font-size:.95rem;"></div>
+          <button
+            id="closeExpired"
+            style="margin-top:1.5rem; padding:.4rem .8rem; border:1px solid #ccc; border-radius:8px;
+                  background:#fff; cursor:pointer; color:#000; font-weight:600;">
+          Close
+        </button>
+      </div>
+    </div>
+
   </main>
 </div>
 

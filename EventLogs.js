@@ -329,4 +329,70 @@ clearBtn?.addEventListener('click', async () => {
 prevBtn?.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); }});
 nextBtn?.addEventListener('click', () => { const total = Math.ceil(cache.length / PAGE_SIZE); if (currentPage < total) { currentPage++; renderPage(); }});
 
+const viewExpiredBtn = document.getElementById('viewExpired');
+const expiredPopup = document.getElementById('expiredPopup');
+const expiredList = document.getElementById('expiredList');
+const closeExpired = document.getElementById('closeExpired');
+
+// Show expired passwords popup
+viewExpiredBtn?.addEventListener('click', async () => {
+  expiredList.innerHTML = `<div>Loading expired passwords...</div>`;
+  expiredPopup.style.display = 'flex';
+
+  try {
+    const { data, error } = await db
+      .from('users')
+      .select('username, old_passwords');
+
+    if (error) {
+      expiredList.innerHTML = `<div style="color:#b91c1c;">Error: ${error.message}</div>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      expiredList.innerHTML = `<div>No users found.</div>`;
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    data.forEach(user => {
+      const oldPwArray = Array.isArray(user.old_passwords) ? user.old_passwords : [];
+      if (oldPwArray.length === 0) return; // skip users with no old passwords
+
+      const wrapper = document.createElement('div');
+      wrapper.style.borderBottom = '1px solid #e5e7eb';
+      wrapper.style.padding = '0.6rem 0';
+
+      const uname = document.createElement('div');
+      uname.style.fontWeight = '600';
+      uname.textContent = user.username || '(No username)';
+      wrapper.appendChild(uname);
+
+      const pwList = document.createElement('ul');
+      pwList.style.marginLeft = '1rem';
+
+      oldPwArray.forEach(pw => {
+        const li = document.createElement('li');
+        li.textContent = pw;
+        pwList.appendChild(li);
+      });
+
+      wrapper.appendChild(pwList);
+      frag.appendChild(wrapper);
+    });
+
+
+    expiredList.innerHTML = '';
+    expiredList.appendChild(frag);
+
+  } catch (err) {
+    expiredList.innerHTML = `<div style="color:#b91c1c;">Error loading data: ${err.message}</div>`;
+  }
+});
+
+// Close popup
+closeExpired?.addEventListener('click', () => {
+  expiredPopup.style.display = 'none';
+});
+
 document.addEventListener('DOMContentLoaded', init);
