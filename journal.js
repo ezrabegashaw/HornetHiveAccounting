@@ -1,11 +1,20 @@
 // journal.js
 const db = window.supabaseClient;
 
+// --- Money formatting helper ---
+function fmtMoney(value) {
+  const num = Number(value || 0);
+  return "$" + num.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 // --- Current user context (role & id) ---
 let CURRENT_USER = {
   username: localStorage.getItem("username") || "User",
   id: null,
-  role: "accountant"
+  role: "accountant",
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -125,20 +134,15 @@ function addJournalRow() {
   row.append(td1, td2, td3, td4, td5);
   tbody.appendChild(row);
 
-  // Keep UX nice & quiet while editing (no live error spam)
   accountSelect.addEventListener("change", () => {
     refreshAccountSelectOptions();
   });
-  debit.addEventListener("input", () => {});
-  credit.addEventListener("input", () => {});
-  desc.addEventListener("input", () => {});
 
   removeBtn.addEventListener("click", () => {
     row.remove();
     refreshAccountSelectOptions();
   });
 
-  // After adding a new row, prune duplicates from dropdowns
   refreshAccountSelectOptions();
 }
 
@@ -147,7 +151,6 @@ function resetJournal() {
   tbody.innerHTML = "";
   addJournalRow();
 
-  // Hide any previous error box
   const box = document.getElementById("journalErrors");
   if (box) { box.style.display = "none"; box.innerHTML = ""; }
 }
@@ -206,9 +209,7 @@ function refreshAccountSelectOptions() {
  *  - Each row: one side only (debit XOR credit), amount > 0
  *  - No duplicate accounts
  *  - Debits must equal credits
- *  - **Debits must be listed first** (no Debit after any Credit)
- * Returns { ok: boolean, errors: string[] }
- * If render=true, displays errors in #journalErrors (red). If false, stays silent.
+ *  - Debits must be listed first (no debit lines after any credit line)
  */
 function validateJournal(render = false) {
   const errors = [];
@@ -222,8 +223,6 @@ function validateJournal(render = false) {
   const seenAccounts = new Set();
   let totalDebit = 0;
   let totalCredit = 0;
-
-  // Track ordering: once we see any Credit line, no later Debit lines are allowed
   let seenCreditAlready = false;
 
   rows.forEach((row, idx) => {
@@ -247,8 +246,6 @@ function validateJournal(render = false) {
       errors.push(`Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`);
     }
 
-    // Enforce "Debits must be listed first"
-    // If we've already seen a credit line, any later debit line is invalid
     if (hasCredit) {
       seenCreditAlready = true;
     } else if (hasDebit && seenCreditAlready) {
@@ -271,11 +268,14 @@ function validateJournal(render = false) {
     const d = Number(totalDebit.toFixed(2));
     const c = Number(totalCredit.toFixed(2));
     if (d !== c) {
-      errors.push(`Debits and Credits must balance. Current totals: Debit ${d.toFixed(2)} vs Credit ${c.toFixed(2)}.`);
+      errors.push(
+        `Debits and Credits must balance. Current totals: Debit ${d.toFixed(
+          2
+        )} vs Credit ${c.toFixed(2)}.`
+      );
     }
   }
 
-  // Only render if asked (on Submit)
   if (render && errorBox) {
     if (errors.length) {
       errorBox.style.display = "block";
@@ -294,12 +294,12 @@ function validateJournal(render = false) {
 }
 
 async function submitJournalEntry() {
-  // ✅ Only show errors now (on submit)
   const { ok } = validateJournal(true);
   if (!ok) return;
 
   const rows = document.querySelectorAll("#journalTableBody tr");
-  let totalDebit = 0, totalCredit = 0;
+  let totalDebit = 0,
+    totalCredit = 0;
   const lines = [];
 
   for (const row of rows) {
@@ -313,17 +313,20 @@ async function submitJournalEntry() {
     lines.push({ account_id: Number(accountId), debit, credit, description });
   }
 
-  const initialStatus = (CURRENT_USER.role === "manager") ? "approved" : "pending";
+  const initialStatus =
+    CURRENT_USER.role === "manager" ? "approved" : "pending";
 
   const { data: entryData, error: entryError } = await db
     .from("journal_entries")
-    .insert([{
-      date: new Date().toISOString().slice(0, 10),
-      status: initialStatus,
-      created_by: CURRENT_USER.username,
-      total_debit: totalDebit,
-      total_credit: totalCredit
-    }])
+    .insert([
+      {
+        date: new Date().toISOString().slice(0, 10),
+        status: initialStatus,
+        created_by: CURRENT_USER.username,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+      },
+    ])
     .select()
     .single();
 
@@ -331,7 +334,9 @@ async function submitJournalEntry() {
     const box = document.getElementById("journalErrors");
     if (box) {
       box.style.display = "block";
-      box.innerHTML = `<div class="title">Save failed:</div><ul><li>${entryError?.message || "Failed to create journal entry."}</li></ul>`;
+      box.innerHTML = `<div class="title">Save failed:</div><ul><li>${
+        entryError?.message || "Failed to create journal entry."
+      }</li></ul>`;
     } else {
       alert("Failed to create journal entry.");
     }
@@ -340,9 +345,15 @@ async function submitJournalEntry() {
 
   const journalEntryId = entryData.entry_id;
 
-  const { error: linesError } = await db.from("journal_lines").insert(
-    lines.map(l => ({ ...l, journal_entry_id: journalEntryId, created_at: new Date().toISOString() }))
-  );
+  const { error: linesError } = await db
+    .from("journal_lines")
+    .insert(
+      lines.map((l) => ({
+        ...l,
+        journal_entry_id: journalEntryId,
+        created_at: new Date().toISOString(),
+      }))
+    );
   if (linesError) {
     const box = document.getElementById("journalErrors");
     if (box) {
@@ -358,11 +369,19 @@ async function submitJournalEntry() {
     await postApprovedEntryToLedger(journalEntryId);
   }
 
-  // Clear the form & list refresh
   resetJournal();
   const box = document.getElementById("journalErrors");
-  if (box) { box.style.display = "none"; box.innerHTML = ""; }
-  alert(`Journal entry ${initialStatus === "approved" ? "saved & approved" : "submitted for approval"}!`);
+  if (box) {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+  alert(
+    `Journal entry ${
+      initialStatus === "approved"
+        ? "saved & approved"
+        : "submitted for approval"
+    }!`
+  );
   loadJournalEntries(true);
 }
 
@@ -385,7 +404,10 @@ async function rejectEntry(entryId) {
 
   const { error } = await db
     .from("journal_entries")
-    .update({ status: "rejected", description: `Rejected by ${CURRENT_USER.username}: ${comment.trim()}` })
+    .update({
+      status: "rejected",
+      description: `Rejected by ${CURRENT_USER.username}: ${comment.trim()}`,
+    })
     .eq("entry_id", entryId);
 
   if (error) return alert("Failed to reject entry.");
@@ -397,13 +419,15 @@ async function postApprovedEntryToLedger(entryId) {
   try {
     const { data: lines, error: lErr } = await db
       .from("journal_lines")
-      .select(`
+      .select(
+        `
         account_id,
         debit,
         credit,
         description,
         accounts!inner(account_id, account_number, account_name, normal_side, balance)
-      `)
+      `
+      )
       .eq("journal_entry_id", entryId);
     if (lErr) return lErr;
 
@@ -416,40 +440,52 @@ async function postApprovedEntryToLedger(entryId) {
     for (const line of lines) {
       const acc = line.accounts;
       let currentBal = Number(acc.balance || 0);
-      const isDebitNormal = (acc.normal_side || "").toLowerCase() === "debit";
+      const isDebitNormal =
+        (acc.normal_side || "").toLowerCase() === "debit";
       const delta = isDebitNormal
-        ? (Number(line.debit || 0) - Number(line.credit || 0))
-        : (Number(line.credit || 0) - Number(line.debit || 0));
+        ? Number(line.debit || 0) - Number(line.credit || 0)
+        : Number(line.credit || 0) - Number(line.debit || 0);
       const newBal = Number((currentBal + delta).toFixed(2));
 
-      await db.from("ledger").insert([{
-        journal_entry_id: entryId,
-        account_number: acc.account_number,
-        account_name: acc.account_name,
-        date: entry.date,
-        description: line.description || `Journal #${entryId}`,
-        debit: line.debit || null,
-        credit: line.credit || null,
-        balance: newBal,
-        created_at: new Date().toISOString()
-      }]);
+      await db.from("ledger").insert([
+        {
+          journal_entry_id: entryId,
+          account_number: acc.account_number,
+          account_name: acc.account_name,
+          date: entry.date,
+          description: line.description || `Journal #${entryId}`,
+          debit: line.debit || null,
+          credit: line.credit || null,
+          balance: newBal,
+          created_at: new Date().toISOString(),
+        },
+      ]);
 
-      await db.from("accounts").update({ balance: newBal }).eq("account_id", acc.account_id);
+      await db
+        .from("accounts")
+        .update({ balance: newBal })
+        .eq("account_id", acc.account_id);
     }
-  } catch (e) { return e; }
+  } catch (e) {
+    return e;
+  }
 }
 
 // -------------------------
 // Load journal entries (filters + search)
 // -------------------------
 async function loadJournalEntries(showAll) {
-  const status = showAll ? "all" : (document.getElementById("statusFilter")?.value || "all");
+  const status = showAll
+    ? "all"
+    : document.getElementById("statusFilter")?.value || "all";
   const startDate = document.getElementById("startDate")?.value || "";
-  const endDate   = document.getElementById("endDate")?.value   || "";
-  const searchRaw = (document.getElementById("entrySearch")?.value || "").trim();
+  const endDate = document.getElementById("endDate")?.value || "";
+  const searchRaw =
+    (document.getElementById("entrySearch")?.value || "").trim();
   const search = searchRaw.toLowerCase();
 
-  let query = db.from("journal_entries").select(`
+  let query = db.from("journal_entries").select(
+    `
     entry_id,
     date,
     status,
@@ -463,20 +499,22 @@ async function loadJournalEntries(showAll) {
       description,
       accounts!inner(account_name)
     )
-  `);
+  `
+  );
 
   if (status !== "all") query = query.eq("status", status);
   if (startDate) query = query.gte("date", startDate);
-  if (endDate)   query = query.lte("date", endDate);
+  if (endDate) query = query.lte("date", endDate);
 
   const { data, error } = await query.order("date", { ascending: false });
 
   const tbody = document.getElementById("journalEntriesTableBody");
-  if (!tbody) return; // when in detail view, this section is removed
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="7" style="color:red;text-align:center;">Error loading entries</td></tr>`;
+    tbody.innerHTML =
+      '<tr><td colspan="7" style="color:red;text-align:center;">Error loading entries</td></tr>';
     return;
   }
 
@@ -484,13 +522,18 @@ async function loadJournalEntries(showAll) {
 
   if (search) {
     const isNumeric = !isNaN(Number(search));
-    rows = rows.filter(e => {
+    rows = rows.filter((e) => {
       const dateIso = e.date || "";
-      const dateLocal = e.date ? new Date(e.date).toLocaleDateString().toLowerCase() : "";
-      const dateMatch = dateIso.includes(search) || dateLocal.includes(search);
+      const dateLocal = e.date
+        ? new Date(e.date).toLocaleDateString().toLowerCase()
+        : "";
+      const dateMatch =
+        dateIso.includes(search) || dateLocal.includes(search);
 
       const lines = e.journal_lines || [];
-      const lineText = lines.map(l => (l.accounts?.account_name || "").toLowerCase()).join(" ");
+      const lineText = lines
+        .map((l) => (l.accounts?.account_name || "").toLowerCase())
+        .join(" ");
       const nameMatch = lineText.includes(search);
 
       let amountMatch = false;
@@ -502,37 +545,60 @@ async function loadJournalEntries(showAll) {
         ) {
           amountMatch = true;
         } else {
-          amountMatch = lines.some(l =>
-            Number(l.debit || 0).toFixed(2) === target ||
-            Number(l.credit || 0).toFixed(2) === target
+          amountMatch = lines.some(
+            (l) =>
+              Number(l.debit || 0).toFixed(2) === target ||
+              Number(l.credit || 0).toFixed(2) === target
           );
         }
       }
+
       return dateMatch || nameMatch || amountMatch;
     });
   }
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No entries found</td></tr>`;
+    tbody.innerHTML =
+      '<tr><td colspan="7" style="text-align:center;">No entries found</td></tr>';
     return;
   }
 
-  rows.forEach(entry => {
+  rows.forEach((entry) => {
     const linesHtml = (entry.journal_lines || [])
-      .map(l => `${l.accounts.account_name}: D ${Number(l.debit||0).toFixed(2)} / C ${Number(l.credit||0).toFixed(2)}`)
+      .map((l) => {
+        const debit = Number(l.debit || 0);
+        const credit = Number(l.credit || 0);
+        const isDebit = debit > 0;
+        const isCredit = credit > 0;
+
+        // Indent credit account names
+        const baseName = l.accounts?.account_name || "";
+        const label = (isCredit ? "&nbsp;&nbsp;&nbsp;" : "") + baseName;
+
+        const dPart = isDebit ? "D " + fmtMoney(debit) : "";
+        const cPart = isCredit ? "C " + fmtMoney(credit) : "";
+        const amountPart = [dPart, cPart].filter(Boolean).join(" ");
+
+        return `${label}: ${amountPart}`;
+      })
       .join("<br>");
 
-    const canAct = CURRENT_USER.role === "manager" && entry.status === "pending";
+    const canAct =
+      CURRENT_USER.role === "manager" && entry.status === "pending";
 
     const tr = document.createElement("tr");
     tr.style.backgroundColor =
-      entry.status === "approved" ? "#e7f7eb" : entry.status === "rejected" ? "#fde8e8" : "transparent";
+      entry.status === "approved"
+        ? "#e7f7eb"
+        : entry.status === "rejected"
+        ? "#fde8e8"
+        : "transparent";
 
     tr.innerHTML = `
       <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ""}</td>
       <td>${entry.status}</td>
-      <td>${Number(entry.total_debit).toFixed(2)}</td>
-      <td>${Number(entry.total_credit).toFixed(2)}</td>
+      <td>${fmtMoney(entry.total_debit)}</td>
+      <td>${fmtMoney(entry.total_credit)}</td>
       <td>${linesHtml}</td>
       <td><a href="journal.html?entry_id=${entry.entry_id}">View</a></td>
       <td style="display:${CURRENT_USER.role === "manager" ? "" : "none"};">
@@ -563,7 +629,9 @@ async function renderJournalDetailOnly(entryId) {
       if (window.history.length > 1) {
         window.history.back();
       } else if (accountId) {
-        window.location.href = `ledger.html?account_id=${encodeURIComponent(accountId)}`;
+        window.location.href = `ledger.html?account_id=${encodeURIComponent(
+          accountId
+        )}`;
       } else {
         window.location.href = "ledger.html";
       }
@@ -571,28 +639,42 @@ async function renderJournalDetailOnly(entryId) {
   }
 
   const tbody = document.getElementById("journalTableBody");
-  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Loading entry...</td></tr>`;
+  tbody.innerHTML =
+    '<tr><td colspan="5" style="text-align:center;">Loading entry...</td></tr>';
 
   const { data, error } = await db
     .from("journal_lines")
-    .select(`
-      debit, credit, description,
+    .select(
+      `
+      debit,
+      credit,
+      description,
       accounts!inner(account_name)
-    `)
+    `
+    )
     .eq("journal_entry_id", entryId);
 
   if (error || !data?.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">No data found</td></tr>`;
+    tbody.innerHTML =
+      '<tr><td colspan="5" style="text-align:center;color:red;">No data found</td></tr>';
     return;
   }
 
   tbody.innerHTML = "";
-  data.forEach(line => {
+  data.forEach((line) => {
+    const debit = Number(line.debit || 0);
+    const credit = Number(line.credit || 0);
+    const isCredit = credit > 0;
+
+    const accountLabel = isCredit
+      ? "\u00A0\u00A0\u00A0" + line.accounts.account_name
+      : line.accounts.account_name;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${line.accounts.account_name}</td>
-      <td>${line.debit ? Number(line.debit).toFixed(2) : ""}</td>
-      <td>${line.credit ? Number(line.credit).toFixed(2) : ""}</td>
+      <td>${accountLabel}</td>
+      <td>${debit > 0 ? fmtMoney(debit) : ""}</td>
+      <td>${credit > 0 ? fmtMoney(credit) : ""}</td>
       <td>${line.description || ""}</td>
       <td class="muted">—</td>`;
     tbody.appendChild(tr);
@@ -609,17 +691,23 @@ function actionButtons(entryId) {
 }
 
 // Approve/Reject button handling (only on the normal list view)
-document.addEventListener("click", e => {
+document.addEventListener("click", (e) => {
   const approveBtn = e.target.closest("[data-approve]");
   const rejectBtn = e.target.closest("[data-reject]");
-  if (approveBtn) approveEntry(Number(approveBtn.getAttribute("data-approve")));
+  if (approveBtn)
+    approveEntry(Number(approveBtn.getAttribute("data-approve")));
   if (rejectBtn) {
     const entryId = Number(rejectBtn.getAttribute("data-reject"));
-    const input = document.querySelector(`[data-comment-for="${entryId}"]`);
+    const input = document.querySelector(
+      `[data-comment-for="${entryId}"]`
+    );
     const comment = input?.value;
-    if (!comment?.trim()) return alert("Please enter a rejection comment.");
+    if (!comment?.trim())
+      return alert("Please enter a rejection comment.");
     const originalPrompt = window.prompt;
     window.prompt = () => comment;
-    rejectEntry(entryId).finally(() => { window.prompt = originalPrompt; });
+    rejectEntry(entryId).finally(() => {
+      window.prompt = originalPrompt;
+    });
   }
 });
