@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hornet Hive Accounting - Income Statement</title>
+  <link rel="stylesheet" href="main.css">
+
+  <style>
+    body.has-sidebar {
+      font-family: Arial, sans-serif;
+      color: #111827;
+      background: #f9fafb;
+    }
+    .main {
+      padding: 2rem;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.75rem;
+    }
+    .header h2 {
+      margin: 0.25rem 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+    table {
+      width: 70%;
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    td {
+      padding: 6px 10px;
+      vertical-align: bottom;
+    }
+    .is-section {
+      font-weight: 600;
+      padding-left: 0; /* Align section titles left */
+      padding-top: 0.5rem;
+    }
+    .is-label {
+      padding-left: 2rem; /* Indent account names */
+      white-space: pre;   /* Preserve spaces from JS */
+    }
+    .is-amount {
+      text-align: right;
+      padding-right: 2rem;
+    }
+    .amt {
+      display: inline-block;
+      padding: 0 2px 1px 2px;
+    }
+    .amt.single-underline {
+      border-bottom: 1px solid #111827;
+    }
+    .amt.double-underline {
+      border-bottom: 3px double #111827;
+    }
+    .brand {
+      font-weight: bold;
+      font-size: 1.25rem;
+    }
+  </style>
+</head>
+
+<body class="has-sidebar">
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+
+<script>
+  const name = localStorage.getItem('username') || 'User';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo" style="width:28px;vertical-align:middle;margin-right:6px;">HHA
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="income_statement.html" aria-current="page">Income Statement</a></li>
+      <li><a href="#balance">Balance Sheet</a></li>
+      <li><a href="#retained">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn" id="logoutBtn">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <h1>Hornet Hive Accounting</h1>
+      <h2>Income Statement</h2>
+      <p id="periodLine">For the Year Ended</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tbody id="incomeBody">
+          <tr><td colspan="2" style="text-align:center;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="notify.js"></script>
+
+<script>
+// income_statement.js (final integrated version)
+
+const db = window.supabaseClient;
+
+function fmt(amount) {
+  const n = Number(amount || 0);
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function addRow(tbody, label, amount, opts = {}) {
+  const tr = document.createElement("tr");
+  const tdLabel = document.createElement("td");
+  tdLabel.className = opts.section ? "is-section" : "is-label";
+  tdLabel.textContent = label || "";
+  if (opts.bold) tdLabel.style.fontWeight = "bold";
+  tr.appendChild(tdLabel);
+
+  const tdAmount = document.createElement("td");
+  tdAmount.className = "is-amount";
+  if (amount != null) {
+    const span = document.createElement("span");
+    span.className = "amt";
+    if (opts.underline === "single") span.classList.add("single-underline");
+    if (opts.underline === "double") span.classList.add("double-underline");
+    const displayAmt = opts.showDollar ? "$" + fmt(amount) : fmt(amount);
+    span.textContent = displayAmt;
+    tdAmount.appendChild(span);
+  }
+  tr.appendChild(tdAmount);
+  tbody.appendChild(tr);
+}
+
+async function getAccountData() {
+  try {
+    const { data, error } = await db
+      .from("v_account_balances")
+      .select("account_number, account_name, account_category, computed_balance")
+      .order("account_number", { ascending: true });
+    if (!error && data && data.length) {
+      return data.map(r => ({
+        account_number: r.account_number,
+        account_name: r.account_name,
+        account_category: r.account_category,
+        balance: r.computed_balance
+      }));
+    }
+  } catch {}
+  const { data } = await db
+    .from("accounts")
+    .select("account_number, account_name, account_category, balance, is_active")
+    .order("account_number", { ascending: true });
+  return (data || []).filter(r => r.is_active !== false);
+}
+
+async function buildIncomeStatement() {
+  const periodLine = document.getElementById("periodLine");
+  const body = document.getElementById("incomeBody");
+
+  const now = new Date();
+  const endStr = now.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  periodLine.textContent = `For the Year Ended ${endStr}`;
+
+  body.innerHTML = "";
+
+  let rows;
+  try { rows = await getAccountData(); } 
+  catch { addRow(body, "Error loading income statement", null); return; }
+
+  if (!rows || !rows.length) { addRow(body, "No data available.", null); return; }
+
+  const revenues = rows.filter(r => (r.account_category || "").toLowerCase() === "revenue");
+  const expenses = rows.filter(r => (r.account_category || "").toLowerCase() === "expense");
+
+  // Revenues
+  addRow(body, "Revenues", null, { section: true });
+  let totalRevenue = 0;
+  revenues.forEach((r, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === revenues.length - 1;
+    const amt = Number(r.balance || 0);
+    totalRevenue += amt;
+    addRow(body, "     " + r.account_name, amt, {
+      underline: isLast ? "single" : null,
+      showDollar: isFirst
+    });
+  });
+  addRow(body, "Total Revenues", totalRevenue, { underline: "single" });
+  addRow(body, "", null);
+
+  // Expenses
+  addRow(body, "Expenses", null, { section: true });
+  let totalExpenses = 0;
+  expenses.forEach((r, idx) => {
+    const isLast = idx === expenses.length - 1;
+    const amt = Number(r.balance || 0);
+    totalExpenses += amt;
+    addRow(body, "     " + r.account_name, amt, {
+      underline: isLast ? "single" : null
+    });
+  });
+  addRow(body, "Total Expenses", totalExpenses, { underline: "single" });
+  addRow(body, "", null);
+
+  // Net Income
+  const netIncome = totalRevenue - totalExpenses;
+  addRow(body, "Net Income", netIncome, {
+    underline: "double",
+    showDollar: true,
+    bold: true
+  });
+}
+
+document.addEventListener("DOMContentLoaded", buildIncomeStatement);
+</script>
+
+<script>
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+  try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
+  localStorage.removeItem('username');
+  location.href = 'HornetHiveLogin.html';
+});
+</script>
+</body>
+</html>
