@@ -5,78 +5,105 @@
   <meta charset="UTF-8">
   <title>Hornet Hive Accounting - Trial Balance</title>
   <link rel="stylesheet" href="main.css">
+
   <style>
     .tb-header {
-      text-align:center;
-      margin-bottom:1.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
     }
     .tb-header h1 {
-      margin:0;
-      font-size:1.6rem;
-      font-weight:600;
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
     }
     .tb-header h2 {
-      margin:.1rem 0;
-      font-size:1.25rem;
-      font-weight:500;
+      margin: 0.1rem 0;
+      font-size: 1.15rem;
+      font-weight: 500;
     }
     .tb-header p {
-      margin:0;
-      color:#6b7280;
+      margin: 0.1rem 0;
+      color: #6b7280;
     }
+
     .table-wrap {
-      background:#ffffff;
-      border-radius:10px;
-      padding:1rem;
-      box-shadow:0 8px 24px rgba(15,23,42,.06);
+      margin-top: 0.75rem;
     }
-    table.tb-table {
-      width:100%;
-      border-collapse:collapse;
+
+    table.tb {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
     }
-    .tb-table thead th {
-      text-align:left;
-      padding:.5rem .75rem;
-      border-bottom:1px solid #e5e7eb;
-      background:#f9fafb;
-      font-weight:600;
+
+    table.tb thead th {
+      border-bottom: 1px solid #111827;
+      padding: 0.35rem 0.35rem;
+      text-align: left;
     }
-    .tb-table tbody td,
-    .tb-table tfoot td {
-      padding:.45rem .75rem;
-      border-bottom:1px solid #f3f4f6;
-      font-size:.95rem;
+
+    table.tb th:nth-child(2),
+    table.tb th:nth-child(3) {
+      text-align: right;
+      padding-right: 1.5rem;
     }
-    .tb-table tbody tr:hover {
-      background:#f9fafb;
+
+    table.tb tbody td {
+      padding: 0.25rem 0.35rem;
+      border-bottom: 1px solid #e5e7eb;
     }
-    .tb-table td.num {
-      text-align:right;
-      font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    table.tb tbody tr:last-child td {
+      border-bottom: none;
     }
-    .tb-table tfoot td {
-      font-weight:700;
-      background:#f1f5f9;
-      border-top:2px solid #111827;
+
+    table.tb td.num {
+      text-align: right;
+      padding-right: 1.5rem;
+      white-space: nowrap;
     }
-    .tb-ok {
-      margin-top:.5rem;
-      font-size:.9rem;
-      color:#16a34a;
-      font-weight:600;
-    }
-    .tb-warn {
-      margin-top:.5rem;
-      font-size:.9rem;
-      color:#b91c1c;
-      font-weight:600;
-    }
+
     .tb-account-link {
-      color:#111827;
-      text-decoration:none;
+      color: #111827;
+      text-decoration: none;
     }
     .tb-account-link:hover {
-      text-decoration:underline;
+      text-decoration: underline;
+    }
+
+    /* Totals row */
+    tfoot td {
+      padding: 0.35rem 0.35rem 0.15rem;
+    }
+
+    tfoot td.tb-label {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    tfoot td.tb-total {
+      text-align: right;
+      padding-right: 1.5rem;
+    }
+
+    /* Double underline only under the numbers themselves */
+    tfoot td.tb-total span {
+      display: inline-block;
+      padding: 0 0.15rem;
+      border-bottom: 3px double #000;
+    }
+
+    .tb-msg {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      text-align: right;
+    }
+    .tb-msg.tb-ok {
+      color: #15803d;
+    }
+    .tb-msg.tb-warn {
+      color: #b91c1c;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -95,7 +122,7 @@
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
 
-  function updateClock(){
+  function updateClock() {
     const now = new Date();
     const options = {
       weekday:'short', year:'numeric', month:'short', day:'numeric',
@@ -105,7 +132,7 @@
       now.toLocaleString(undefined, options);
   }
   updateClock();
-  setInterval(updateClock,1000);
+  setInterval(updateClock, 1000);
 </script>
 
 <div class="app">
@@ -116,7 +143,7 @@
     <ul class="nav">
       <li><a href="Dashboard.html">Dashboard</a></li>
       <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="#accounts">Accounts</a></li>
       <li><a href="journal.html">Journalize</a></li>
       <li><a href="trial_balance.html" aria-current="page">Trial Balance</a></li>
       <li><a href="#income">Income Statement</a></li>
@@ -132,16 +159,16 @@
     <div class="tb-header">
       <h1>Hornet Hive Accounting</h1>
       <h2>Trial Balance</h2>
-      <p id="tbAsOf">As of <!-- filled by JS --></p>
+      <p id="tbAsOf">As of</p>
     </div>
 
     <div class="table-wrap">
-      <table class="tb-table">
+      <table class="tb">
         <thead>
           <tr>
             <th>Account</th>
-            <th class="num">Debit</th>
-            <th class="num">Credit</th>
+            <th>Debit</th>
+            <th>Credit</th>
           </tr>
         </thead>
         <tbody id="tbBody">
@@ -149,27 +176,26 @@
         </tbody>
         <tfoot>
           <tr>
-            <td>Total</td>
-            <td class="num" id="tbTotalDebit">0.00</td>
-            <td class="num" id="tbTotalCredit">0.00</td>
+            <td class="tb-label">Totals</td>
+            <td id="tbTotalDebit" class="tb-total num"></td>
+            <td id="tbTotalCredit" class="tb-total num"></td>
           </tr>
         </tfoot>
       </table>
-      <div id="tbMessage"></div>
+      <div id="tbMessage" class="tb-msg"></div>
     </div>
   </main>
 </div>
 
-<!-- Supabase + auth -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script src="trial_balance.js"></script>
-
 <script>
-  // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     try {
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
+      if (window.supabaseClient?.auth) {
+        await window.supabaseClient.auth.signOut();
+      }
     } catch(e){}
     localStorage.removeItem('username');
     location.href = 'HornetHiveLogin.html';
