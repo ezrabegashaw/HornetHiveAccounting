@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hornet Hive Accounting - Balance Sheet</title>
+  <link rel="stylesheet" href="main.css">
+  <style>
+    .statement-wrap{
+      max-width:900px;
+      margin:2.5rem auto;
+      background:#ffffff;
+      border-radius:10px;
+      box-shadow:0 8px 24px rgba(15,23,42,.08);
+      padding:1.75rem 2rem 2.25rem;
+    }
+    .statement-header{
+      text-align:center;
+      margin-bottom:1.5rem;
+    }
+    .statement-header h1{
+      font-size:1.4rem;
+      font-weight:700;
+      margin:0;
+      color:#111827;
+    }
+    .statement-header h2{
+      font-size:1.05rem;
+      margin:.15rem 0 0;
+      font-weight:500;
+      color:#374151;
+    }
+    .statement-header p{
+      margin:.1rem 0 0;
+      font-size:.9rem;
+      color:#6b7280;
+    }
+
+    .bs-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.93rem;
+    }
+    .bs-table td{
+      padding:.15rem 0;
+      vertical-align:bottom;
+    }
+    .col-label{
+      width:70%;
+      color:#111827;
+    }
+    .col-amt{
+      width:30%;
+      text-align:right;
+      padding-left:1rem;
+      color:#111827;
+      white-space:nowrap;
+    }
+
+    /* section labels */
+    .section-title{
+      font-weight:600;
+      color:#1f2937;
+      padding-top:.6rem;
+    }
+    .sub-title{
+      font-weight:600;
+      color:#4b5563;
+      padding-top:.25rem;
+    }
+
+    .indent-1{ padding-left:1.25rem; }
+    .indent-2{ padding-left:2.25rem; }
+
+    /* underline helpers: applied only to the number cell */
+    .single-underline{
+      border-bottom:1px solid #111827;
+      padding-bottom:.1rem;
+    }
+    .double-underline{
+      border-bottom:3px double #111827;
+      padding-bottom:.12rem;
+    }
+
+    .muted{
+      color:#6b7280;
+      font-size:.86rem;
+      padding-top:.35rem;
+    }
+  </style>
+</head>
+<body class="has-sidebar">
+
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+<script>
+  const name = localStorage.getItem('username') || 'User';
+  const userSpan = document.getElementById('userName');
+  if (userSpan) userSpan.textContent = name;
+
+  function updateClock(){
+    const now = new Date();
+    const options = {
+      weekday:'short', year:'numeric', month:'short', day:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    };
+    document.getElementById('dateTime').textContent =
+      now.toLocaleString(undefined, options);
+  }
+  updateClock();
+  setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.ReadOnly.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="income_statement.html">Income Statement</a></li>
+      <li><a href="balance_sheet.html" aria-current="page">Balance Sheet</a></li>
+      <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn" id="logoutBtn">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="statement-wrap">
+      <div class="statement-header">
+        <h1>Hornet Hive Accounting</h1>
+        <h2>Balance Sheet</h2>
+        <p id="bsPeriod">As of &mdash;</p>
+      </div>
+
+      <table class="bs-table" id="bsTable">
+        <tbody>
+        <!-- Filled by JS -->
+        </tbody>
+      </table>
+
+      <div id="bsError" class="muted" style="color:#b91c1c; display:none;"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Supabase + auth bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script>
+  if (typeof initRBAC === 'function') initRBAC();
+  const db = window.supabaseClient;
+
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+
+  function fmt(n){
+    const num = Number(n || 0);
+    return num.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function setPeriodLabel(latestDate){
+    const el = document.getElementById('bsPeriod');
+    if (!el) return;
+    if (latestDate){
+      const d = new Date(latestDate);
+      el.textContent = 'As of ' + d.toLocaleDateString(undefined, {
+        year:'numeric', month:'long', day:'numeric'
+      });
+    } else {
+      const d = new Date();
+      el.textContent = 'As of ' + d.toLocaleDateString(undefined, {
+        year:'numeric', month:'long', day:'numeric'
+      });
+    }
+  }
+
+  async function getLatestJournalDate(){
+    try{
+      const { data, error } = await db
+        .from('journal_entries')
+        .select('date')
+        .order('date', { ascending:false })
+        .limit(1);
+      if (!error && data && data.length && data[0].date) {
+        return data[0].date;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  async function loadBalanceSheet(){
+    const tbody = document.querySelector('#bsTable tbody');
+    const errEl = document.getElementById('bsError');
+    tbody.innerHTML = '';
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+
+    try{
+      const { data, error } = await db
+        .from('v_account_balances')
+        .select('account_name, account_category, computed_balance');
+
+      if (error) throw error;
+      if (!data) throw new Error('No data returned.');
+
+      const map = {};
+      data.forEach(a => { map[a.account_name] = a.computed_balance || 0; });
+
+      // Assets
+      const cash          = map['Cash'] || 0;
+      const ar            = map['Accounts Receivable'] || 0;
+      const preRent       = map['Prepaid Rent'] || 0;
+      const preIns        = map['Prepaid Insurance'] || 0;
+      const supplies      = map['Supplies'] || 0;
+      const equip         = map['Office Equipment'] || 0;
+      const accDepRaw     = map['Accumulated Depreciation, Equipment'] || 0;
+
+      const accDep        = Math.abs(accDepRaw); // display as positive in "Less:"
+      const totalCurrentAssets =
+        cash + ar + preRent + preIns + supplies;
+      const netPPE        = equip - accDep;
+      const totalAssets   = totalCurrentAssets + netPPE;
+
+      // Liabilities
+      const ap            = map['Accounts Payable'] || 0;
+      const salPay        = map['Salaries Payable'] || 0;
+      const unearned      = map['Unearned Revenue'] || 0;
+
+      const totalCurrentLiab = ap + salPay;
+      const totalLiab        = totalCurrentLiab + unearned;
+
+      // Equity
+      const contribCap    = map['Contributed Capital'] || 0;
+      const retainedEarn  = map['Retained Earnings'] || 0;
+      // Dividends Declared ignored here (handled in SRE)
+      const totalEquity   = contribCap + retainedEarn;
+
+      const totalLPlusE   = totalLiab + totalEquity;
+
+      // ---- Build rows ----
+      const rows = [];
+
+      // Assets
+      rows.push(trLabel('Assets', '', 'section-title'));
+      rows.push(trLabel('Current Assets', '', 'sub-title indent-1'));
+
+      // only first asset amount with $
+      rows.push(tr('Cash', '$' + fmt(cash), 'indent-2', 'col-amt'));
+      rows.push(tr('Accounts Receivable', fmt(ar), 'indent-2', 'col-amt'));
+      rows.push(tr('Prepaid Rent', fmt(preRent), 'indent-2', 'col-amt'));
+      rows.push(tr('Prepaid Insurance', fmt(preIns), 'indent-2', 'col-amt'));
+      rows.push(tr('Supplies', fmt(supplies), 'indent-2', 'col-amt'));
+
+      rows.push(tr(
+        'Total Current Assets',
+        fmt(totalCurrentAssets),
+        'indent-1',
+        'col-amt single-underline'
+      ));
+
+      rows.push(trLabel('Property, Plant & Equipment', '', 'sub-title indent-1'));
+      rows.push(tr('Office Equipment', fmt(equip), 'indent-2', 'col-amt'));
+      rows.push(tr('Less: Accumulated Depreciation, Equipment', '(' + fmt(accDep) + ')', 'indent-2', 'col-amt'));
+      rows.push(tr(
+        'Property, Plant & Equipment, Net',
+        fmt(netPPE),
+        'indent-1',
+        'col-amt single-underline'
+      ));
+
+      rows.push(tr(
+        'Total Assets',
+        fmt(totalAssets),
+        '',
+        'col-amt single-underline'
+      ));
+
+      // Liabilities & Equity
+      rows.push(trLabel('Liabilities & Stockholders\' Equity', '', 'section-title'));
+      rows.push(trLabel('Liabilities', '', 'sub-title indent-1'));
+      rows.push(trLabel('Current Liabilities', '', 'sub-title indent-2'));
+
+      // first liability with $ if you like; keep plain to stay clean
+      rows.push(tr('Accounts Payable', fmt(ap), 'indent-3', 'col-amt'));
+      rows.push(tr('Salaries Payable', fmt(salPay), 'indent-3', 'col-amt'));
+
+      rows.push(tr(
+        'Total Current Liabilities',
+        fmt(totalCurrentLiab),
+        'indent-2',
+        'col-amt single-underline'
+      ));
+
+      rows.push(tr('Unearned Revenue', fmt(unearned), 'indent-2', 'col-amt'));
+
+      rows.push(tr(
+        'Total Liabilities',
+        fmt(totalLiab),
+        'indent-1',
+        'col-amt single-underline'
+      ));
+
+      rows.push(trLabel('Stockholders\' Equity', '', 'sub-title indent-1'));
+      rows.push(tr('Contributed Capital', fmt(contribCap), 'indent-2', 'col-amt'));
+      rows.push(tr('Retained Earnings', fmt(retainedEarn), 'indent-2', 'col-amt'));
+
+      rows.push(tr(
+        'Total Stockholders\' Equity',
+        fmt(totalEquity),
+        'indent-1',
+        'col-amt single-underline'
+      ));
+
+      // Final total (double underline)
+      rows.push(tr(
+        'Total Liabilities & Stockholders\' Equity',
+        '$' + fmt(totalLPlusE),
+        '',
+        'col-amt double-underline'
+      ));
+
+      tbody.append(...rows);
+
+      // Period label from journal_entries
+      const latest = await getLatestJournalDate();
+      setPeriodLabel(latest);
+
+      // If for some reason totals don't tie, we just quietly show them;
+      // your underlying data + other pages already confirm they should match.
+    }
+    catch(err){
+      console.error(err);
+      errEl.textContent = 'Error loading balance sheet';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function tr(label, amt, labelClass, amtClass){
+    const tr = document.createElement('tr');
+    const tdL = document.createElement('td');
+    const tdA = document.createElement('td');
+    tdL.className = 'col-label ' + (labelClass || '');
+    tdA.className = (amt ? ('col-amt ' + (amtClass || '')) : 'col-amt ' + (amtClass || ''));
+    tdL.textContent = label;
+    tdA.textContent = amt || (amt === 0 ? '0.00' : '');
+    tr.appendChild(tdL);
+    tr.appendChild(tdA);
+    return tr;
+  }
+
+  function trLabel(text, amt, classes){
+    return tr(text, amt, classes, '');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadBalanceSheet);
+</script>
+</body>
+</html>
