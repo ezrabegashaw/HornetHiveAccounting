@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hornet Hive Accounting - Statement of Retained Earnings</title>
+  <link rel="stylesheet" href="main.css">
+  <style>
+    .sre-wrapper{
+      max-width:900px;
+      margin:2rem auto;
+      background:#ffffff;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(15,23,42,0.08);
+      padding:2rem 2.5rem 2.25rem;
+    }
+    .sre-header{
+      text-align:center;
+      margin-bottom:1.75rem;
+    }
+    .sre-header h1{
+      margin:0;
+      font-size:1.6rem;
+      font-weight:700;
+      color:#111827;
+    }
+    .sre-header h2{
+      margin:.15rem 0 0;
+      font-size:1.05rem;
+      font-weight:600;
+      color:#374151;
+    }
+    .sre-header p{
+      margin:.15rem 0 0;
+      font-size:.9rem;
+      color:#6b7280;
+    }
+
+    .sre-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:1.5rem;
+      font-size:.95rem;
+    }
+    .sre-table tbody tr td{
+      padding:.25rem 0;
+    }
+    .sre-label{
+      padding-left:3rem;
+      color:#111827;
+    }
+    .sre-label.main{
+      padding-left:0;
+      font-weight:600;
+      color:#111827;
+      padding-top:.6rem;
+    }
+    .sre-label.sub{
+      padding-left:1.5rem;
+    }
+    .sre-amount{
+      text-align:right;
+      padding-right:3rem;
+      min-width:140px;
+      color:#111827;
+    }
+
+    .sre-underline,
+    .sre-double-underline{
+      display:inline-block;
+      padding-bottom:2px;
+    }
+    .sre-underline{
+      border-bottom:1px solid #111827;
+    }
+    .sre-double-underline{
+      border-bottom:3px double #111827;
+    }
+
+    .sre-note{
+      margin-top:1rem;
+      font-size:.8rem;
+      color:#9ca3af;
+      text-align:right;
+    }
+
+    @media (max-width:768px){
+      .sre-wrapper{
+        margin:1rem;
+        padding:1.5rem 1.25rem 1.75rem;
+      }
+      .sre-label{ padding-left:2rem; }
+      .sre-label.sub{ padding-left:1rem; }
+      .sre-amount{ padding-right:1.5rem; }
+    }
+  </style>
+</head>
+
+<body class="has-sidebar">
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+
+<script>
+  const name = localStorage.getItem('username') || 'User';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+
+  function updateClock(){
+    const now = new Date();
+    const options = {
+      weekday:'short', year:'numeric', month:'short', day:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    };
+    document.getElementById('dateTime').textContent =
+      now.toLocaleString(undefined, options);
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.ReadOnly.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="income_statement.html">Income Statement</a></li>
+      <li><a href="balance_sheet.html">Balance Sheet</a></li>
+      <li><a href="retained_earnings.html" aria-current="page">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn" id="logoutBtn">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="sre-wrapper">
+      <div class="sre-header">
+        <h1>Hornet Hive Accounting</h1>
+        <h2>Statement of Retained Earnings</h2>
+        <p id="periodLabel"></p>
+      </div>
+
+      <table class="sre-table">
+        <tbody>
+          <tr>
+            <td class="sre-label main">Beginning Retained Earnings</td>
+            <td class="sre-amount" id="beginRE"></td>
+          </tr>
+          <tr>
+            <td class="sre-label sub">Add: Net Income</td>
+            <td class="sre-amount" id="netIncomeAmount"></td>
+          </tr>
+          <tr>
+            <td class="sre-label sub">Less: Dividends</td>
+            <td class="sre-amount" id="dividendsAmount"></td>
+          </tr>
+          <tr>
+            <td class="sre-label main">Ending Retained Earnings</td>
+            <td class="sre-amount" id="endingRE"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div id="sreError" class="sre-note" style="display:none;"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="retained_earnings.js"></script>
+<script>
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+</script>
+</body>
+</html>
