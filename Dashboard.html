@@ -54,9 +54,14 @@
     <div class="brand">
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
-    <ul class="nav">
-      <li><a href="UserDashRevised.html" aria-current="page">Dashboard</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
+    <ul class="nav" id="accountantNav" style="display: none;">
+      <li><a href="Dashboard.html" aria-current="page">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html">Trial Balance</a></li>
+      <li><a href="income_statement.html">Income Statement</a></li>
+      <li><a href="balance_sheet.html">Balance Sheet</a></li>
+      <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
       <li><a href="Messages.html">Messages</a></li>
       <li><a href="Reports.html">Reports</a></li>
     </ul>
@@ -140,6 +145,20 @@
       });
     }
   });
+
+function showNavIfAccountant() {
+  const role = localStorage.getItem("role");
+  console.log("User role:", role);
+
+  if (role === "Accountant") {
+    document.getElementById("accountantNav").style.display = "block";
+  } else {
+    document.getElementById("accountantNav").style.display = "none";
+  }
+}
+
+showNavIfAccountant();
+
 </script>
 
 <script src="message.js"></script>
