@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/ezrabegashaw/HornetHiveAccounting#readme",
   "dependencies": {
+    "@supabase/node-fetch": "^2.6.15",
     "@supabase/supabase-js": "^2.47.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

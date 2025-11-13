@@ -59,6 +59,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function bootstrapUserRole() {
   try {
     const { data, error } = await db
@@ -365,6 +374,28 @@ async function submitJournalEntry() {
     return;
   }
 
+// === Handle attachments (simple base64 storage) ===
+const fileInput = document.getElementById("sourceDocs");
+if (fileInput?.files?.length) {
+  const files = Array.from(fileInput.files);
+  const uploads = [];
+
+  for (const file of files) {
+    const base64 = await toBase64(file);
+    uploads.push({
+      journal_entry_id: journalEntryId,
+      file_name: file.name,
+      file_url: base64, // stores base64 string directly
+    });
+  }
+
+  const { error: attachErr } = await db
+    .from("journal_attachments")
+    .insert(uploads);
+
+  if (attachErr) console.error("Attachment upload failed:", attachErr);
+}
+
   if (initialStatus === "approved") {
     await postApprovedEntryToLedger(journalEntryId);
   }
@@ -600,13 +631,62 @@ async function loadJournalEntries(showAll) {
       <td>${fmtMoney(entry.total_debit)}</td>
       <td>${fmtMoney(entry.total_credit)}</td>
       <td>${linesHtml}</td>
-      <td><a href="journal.html?entry_id=${entry.entry_id}">View</a></td>
+      <td>
+      <a href="journal.html?entry_id=${entry.entry_id}">View</a>
+      <button class="view-docs-btn" data-id="${entry.entry_id}" style="margin-left:6px;">Docs</button>
+      </td>
       <td style="display:${CURRENT_USER.role === "manager" ? "" : "none"};">
         ${canAct ? actionButtons(entry.entry_id) : ""}
       </td>`;
     tbody.appendChild(tr);
   });
 }
+
+async function downloadJournalAttachments(entryId) {
+  try {
+    const { data, error } = await db
+      .from("journal_attachments")
+      .select("file_name, file_url")
+      .eq("journal_entry_id", entryId);
+
+    if (error) throw error;
+    if (!data?.length) {
+      alert("No attachments for this entry.");
+      return;
+    }
+
+    // Trigger download for each file
+    data.forEach(att => {
+      const a = document.createElement("a");
+      a.href = att.file_url; // base64 stored in file_url
+      a.download = att.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  } catch (e) {
+    console.error(e);
+    alert("Error downloading attachments.");
+  }
+}
+
+
+// Event delegation for Docs buttons
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".view-docs-btn");
+  if (!btn) return;
+  const entryId = Number(btn.dataset.id);
+  if (entryId) showJournalAttachments(entryId);
+});
+
+// Handle Docs button click
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".view-docs-btn");
+  if (!btn) return;
+  const entryId = Number(btn.dataset.id);
+  if (entryId) downloadJournalAttachments(entryId);
+});
+
 
 // -------------------------
 // PR deep-link: show ONLY the single journal
