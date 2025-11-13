@@ -4,7 +4,7 @@
 let db = window.supabaseClient;
 if (!db && window.supabase) {
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-  const SUPABASE_ANON_KEY = "your-anon-key-here"; // <-- replace with your anon key if needed
+  const SUPABASE_ANON_KEY = "your-anon-key-here"; // <-- replace if needed
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
@@ -24,13 +24,23 @@ const tableBody = document.getElementById('accountTableBody');
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
 
+const typeFilter = document.getElementById('typeFilter');
+const numFilter  = document.getElementById('numFilter');
+const amtMin     = document.getElementById('amtMin');
+const amtMax     = document.getElementById('amtMax');
+const applyFilters = document.getElementById('applyFilters');
+const clearFilters = document.getElementById('clearFilters');
+
 // (legacy) ledger popup elements (not used when deep-linking to ledger.html)
 const ledgerPopup = document.getElementById('ledgerPopup');
 const closeLedger = document.getElementById('closeLedger');
 
 function openModal(el){ el?.classList.add('show'); }
 function closeModal(el){ el?.classList.remove('show'); }
-function asMoney(n){ return Number(n || 0).toFixed(2); }
+function asMoney(n){
+  return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' })
+    .format(Number(n || 0));
+}
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
 // If you don’t have a numeric user id in your app, return null for accounts.user_id (int4)
@@ -48,17 +58,29 @@ async function logEvent(action, before, after) {
 }
 
 // ---------- Load Accounts (Admin) ----------
-export async function loadAccounts(searchTerm = "") {
-  let query = db.from('v_account_balances')
-    .select('*')
-    .order('account_number', { ascending: true });
+export async function loadAccounts(opts = {}) {
+  const {
+    searchTerm = "",
+    type = "",
+    acctNumLike = "",
+    min = "",
+    max = ""
+  } = opts;
+
+  let query = db.from('v_account_balances').select('*');
 
   if (searchTerm) {
-    query = db.from('v_account_balances')
-      .select('*')
-      .or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`)
-      .order('account_number', { ascending: true });
+    query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
   }
+  if (type) query = query.eq('account_category', type);
+  if (acctNumLike) query = query.ilike('account_number', `%${acctNumLike}%`);
+
+  const minNum = min === "" ? null : Number(min);
+  const maxNum = max === "" ? null : Number(max);
+  if (minNum !== null && !Number.isNaN(minNum)) query = query.gte('computed_balance', minNum);
+  if (maxNum !== null && !Number.isNaN(maxNum)) query = query.lte('computed_balance', maxNum);
+
+  query = query.order('account_number', { ascending: true });
 
   const { data, error } = await query;
 
@@ -76,9 +98,12 @@ export async function loadAccounts(searchTerm = "") {
   data.forEach(acc => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${acc.account_number}</td>
       <td>
-        <!-- ✅ Admin deep-link to ledger.html just like other roles -->
+        <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
+          ${acc.account_number}
+        </a>
+      </td>
+      <td>
         <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
           ${acc.account_name}
         </a>
@@ -93,12 +118,6 @@ export async function loadAccounts(searchTerm = "") {
     tableBody.appendChild(tr);
   });
 }
-
-/* NOTE:
-   The ledger page (ledger.html) already renders a clickable posting reference (J-###)
-   that links to journal.html?entry_id=###. By sending Admins to ledger.html via the
-   account-name link above, Admins now also get “click ref → open journal entry”.
-*/
 
 // ---------- Deactivate dropdown ----------
 async function populateDeactivateOptions() {
@@ -168,7 +187,7 @@ async function submitAccount(e) {
   alert('Account added successfully.');
   form.reset();
   closeModal(popup);
-  await loadAccounts(searchInput.value.trim());
+  await loadAccounts(currentFilters());
 }
 
 // ---------- Deactivate ----------
@@ -187,19 +206,37 @@ async function submitDeactivate(e) {
 
   alert('Account deactivated.');
   closeModal(deactivateOverlay);
-  await loadAccounts(searchInput.value.trim());
+  await loadAccounts(currentFilters());
+}
+
+// ---------- Helpers ----------
+function currentFilters() {
+  return {
+    searchTerm: (searchInput?.value || '').trim(),
+    type: typeFilter?.value || '',
+    acctNumLike: (numFilter?.value || '').trim(),
+    min: amtMin?.value || '',
+    max: amtMax?.value || ''
+  };
 }
 
 // ---------- Events ----------
 document.addEventListener('DOMContentLoaded', () => {
   loadAccounts();
 
-  searchBtn?.addEventListener('click', () => {
-    loadAccounts(searchInput.value.trim());
+  // Search/filters
+  const run = () => loadAccounts(currentFilters());
+  applyFilters?.addEventListener('click', run);
+  clearFilters?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    if (typeFilter) typeFilter.value = '';
+    if (numFilter) numFilter.value = '';
+    if (amtMin) amtMin.value = '';
+    if (amtMax) amtMax.value = '';
+    loadAccounts();
   });
-  searchInput?.addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') loadAccounts(searchInput.value.trim());
-  });
+  searchBtn?.addEventListener('click', run);
+  searchInput?.addEventListener('keyup', (e) => { if (e.key === 'Enter') run(); });
 
   // Add account popup
   addBtn?.addEventListener('click', () => openModal(popup));

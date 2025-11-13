@@ -190,21 +190,62 @@ app.post("/api/update-password", async (req, res) => {
 });
 
 // --------------------- Login / Lock ---------------------
+// Case-insensitive username match + plaintext -> bcrypt auto-migration
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
+
   try {
+    // 1) CASE-INSENSITIVE lookup
     const { data: user, error } = await supabaseAdmin
-      .from("users").select("*").eq("username", username).single();
+      .from("users")
+      .select("*")
+      .ilike("username", username) // matches regardless of case
+      .single();
 
-    if (error || !user) return res.status(401).json({ error: "No account found with that username" });
-    if (!user.approved) return res.status(403).json({ error: "Account awaiting approval" });
+    if (error || !user) {
+      return res.status(401).json({ error: "No account found with that username" });
+    }
+    if (!user.approved) {
+      return res.status(403).json({ error: "Account awaiting approval" });
+    }
 
-    const hashedFromDB = user.password_hash || user.password;
-    const valid = await bcrypt.compare(password, hashedFromDB);
-    if (!valid) return res.status(401).json({ error: "Incorrect password" });
+    // 2) PASSWORD CHECK with migration for legacy plaintext
+    const stored = user.password_hash || user.password || "";
+    const looksHashed = typeof stored === "string" && stored.startsWith("$2");
 
-    const { password: _drop1, password_hash: _drop2, ...safeUser } = user;
+    let valid = false;
+
+    if (looksHashed) {
+      // Normal path: compare against bcrypt hash
+      valid = await bcrypt.compare(password, stored);
+    } else {
+      // Legacy path: stored plaintext — compare once, then migrate to bcrypt
+      valid = stored === password;
+      if (valid) {
+        try {
+          const newHash = await bcrypt.hash(password, SALT_ROUNDS);
+          const { error: upErr } = await supabaseAdmin
+            .from("users")
+            .update({
+              password: newHash,       // replace plaintext with hash (same column)
+              old_password_plain: null // stop keeping plaintext
+            })
+            .eq("id", user.id);
+          if (upErr) console.warn("Password migration update failed:", upErr);
+        } catch (mErr) {
+          console.warn("Password migration error:", mErr);
+        }
+      }
+    }
+
+    if (!valid) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    // 3) Success: strip sensitive fields
+    const { password: _p, password_hash: _ph, old_password_plain: _opp, ...safeUser } = user;
     res.json({ user: safeUser });
+
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Server error logging in" });
