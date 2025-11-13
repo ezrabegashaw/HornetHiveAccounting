@@ -1,3 +1,4 @@
+// ===================== auth.js (header) =====================
 // Import createClient from global supabase object (via CDN)
 const { createClient } = supabase;
 
@@ -11,11 +12,14 @@ window.supabaseClient = supabaseClient;
 window.USE_SUPABASE = true;
 
 /* ----------------------------------------------------------------
-   USERNAME HELPERS
-   Requirement: first initial + full last name + MMYY (created date)
+   API base (HARD-SET for local dev to avoid hostname mismatches)
 ------------------------------------------------------------------*/
+const API_BASE = `http://127.0.0.1:3333/api`;
 
-// Build base username: first initial + full last name + MMYY (using "now" at signup)
+
+/* ----------------------------------------------------------------
+   USERNAME HELPERS
+------------------------------------------------------------------*/
 function baseUsername(first_name, last_name, when = new Date()) {
   const mm = String(when.getMonth() + 1).padStart(2, "0");
   const yy = String(when.getFullYear()).slice(-2);
@@ -24,7 +28,6 @@ function baseUsername(first_name, last_name, when = new Date()) {
   return (f + l + mm + yy).toLowerCase();
 }
 
-// Ensure uniqueness: if "flastMMYY" exists, create "flastMMYY-2", "-3", ...
 async function ensureUniqueUsername(desired) {
   const { data, error } = await supabaseClient
     .from("users")
@@ -42,26 +45,21 @@ async function ensureUniqueUsername(desired) {
 }
 
 /* ----------------------------------------------------------------
-   SIGNUP
-   Saves a unique username to the users table.
-   Called by CreateUser.html submit handler.
+   SIGNUP  (calls backend)
 ------------------------------------------------------------------*/
 async function signupUser(data) {
   try {
-    // Call your backend instead of Supabase directly
-    const response = await fetch('http://localhost:3000/signup', {
+    const response = await fetch(`${API_BASE}/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
 
     const result = await response.json();
-
     if (!response.ok) {
       console.error('Backend signup error:', result);
       return { error: result };
     }
-
     console.log('Signup success:', result);
     return { error: null };
   } catch (err) {
@@ -70,20 +68,15 @@ async function signupUser(data) {
   }
 }
 
-
 /* ----------------------------------------------------------------
-   LOGIN by USERNAME
-   Used by HornetHiveLogin.html after you switched inputs to username
+   LOGIN by USERNAME  (calls backend)
 ------------------------------------------------------------------*/
-// auth.js
 async function loginUserByUsername(username, password) {
-  // === 1. Track failed login attempts per username ===
   const attemptsKey = `attempts_${username}`;
   let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
 
   try {
-    // === 2. Send credentials to backend ===
-    const response = await fetch("http://localhost:3000/login", {
+    const response = await fetch(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -91,27 +84,22 @@ async function loginUserByUsername(username, password) {
 
     const result = await response.json();
 
-    // === 3. Handle errors ===
     if (!response.ok) {
-      // Server says account is pending approval
-      if (response.status === 403 && result.error?.includes("approval")) {
+      if (response.status === 403 && result.error?.toLowerCase().includes("approval")) {
         window.location.href = "PendingPage.html";
         return { user: null, error: { message: "Awaiting approval" } };
       }
 
-      // Increment attempts for wrong password
-      if (response.status === 401 && result.error?.includes("password")) {
+      if (response.status === 401 && result.error?.toLowerCase().includes("password")) {
         attempts++;
         localStorage.setItem(attemptsKey, attempts);
 
-        // After 3 failed attempts, lock the account in Supabase
         if (attempts >= 3) {
-          await fetch("http://localhost:3000/lock-account", {
+          await fetch(`${API_BASE}/lock-account`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username }),
           });
-
           localStorage.removeItem(attemptsKey);
           return { user: null, error: { message: "Account locked due to too many failed attempts." } };
         }
@@ -122,11 +110,9 @@ async function loginUserByUsername(username, password) {
         };
       }
 
-      // Other errors
       return { user: null, error: { message: result.error || "Unexpected login error." } };
     }
 
-    // === 4. Success ===
     localStorage.removeItem(attemptsKey);
     return { user: result.user, error: null };
   } catch (err) {
@@ -135,11 +121,8 @@ async function loginUserByUsername(username, password) {
   }
 }
 
-
-
 /* ----------------------------------------------------------------
-   (Legacy) LOGIN by EMAIL
-   Kept for backwards compatibility. Not used after the switch.
+   (Legacy) LOGIN by EMAIL  – unchanged
 ------------------------------------------------------------------*/
 async function loginUser(email, password) {
   const { data, error } = await supabaseClient
@@ -151,7 +134,6 @@ async function loginUser(email, password) {
 
   if (error) return { error };
 
-  // Track attempts per user (by email)
   const attemptsKey = `attempts_${email}`;
   let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
 
@@ -163,7 +145,6 @@ async function loginUser(email, password) {
   if (data.password !== password) {
     attempts++;
     localStorage.setItem(attemptsKey, attempts);
-
     if (attempts >= 3) {
       await supabaseClient.from("users").update({ approved: false }).eq("email", email);
       localStorage.removeItem(attemptsKey);
@@ -197,8 +178,7 @@ function logout() {
 }
 
 /* ----------------------------------------------------------------
-   ROLE/ACTIVE LOOKUPS (by email) — kept for compatibility
-   You can ignore these if you no longer use them.
+   ROLE/ACTIVE LOOKUPS (by email) — compatibility
 ------------------------------------------------------------------*/
 async function getRole(email) {
   const { data, error } = await supabaseClient
