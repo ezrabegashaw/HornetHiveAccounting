@@ -40,11 +40,19 @@
 <div class="app">
 
   <!-- ADMIN SIDEBAR -->
-  <aside class="sidebar" id="sidebar"></aside>
-  <script src="./StandardLayout/ImportUI.js"></script>
-  <script>
-    loadUI('sidebar', './StandardLayout/AdminSideBar.html');
-  </script>
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashRevised.html" aria-current="page">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
+  </aside>
 
 
   
