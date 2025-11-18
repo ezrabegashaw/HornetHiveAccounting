@@ -322,8 +322,8 @@ async function submitJournalEntry() {
     lines.push({ account_id: Number(accountId), debit, credit, description });
   }
 
-  const initialStatus =
-    CURRENT_USER.role === "manager" ? "approved" : "pending";
+  // 🔹 CHANGE: all entries start as "pending" now (even managers)
+  const initialStatus = "pending";
 
   const { data: entryData, error: entryError } = await db
     .from("journal_entries")
@@ -374,31 +374,30 @@ async function submitJournalEntry() {
     return;
   }
 
-// === Handle attachments (simple base64 storage) ===
-const fileInput = document.getElementById("sourceDocs");
-if (fileInput?.files?.length) {
-  const files = Array.from(fileInput.files);
-  const uploads = [];
+  // === Handle attachments (simple base64 storage) ===
+  const fileInput = document.getElementById("sourceDocs");
+  if (fileInput?.files?.length) {
+    const files = Array.from(fileInput.files);
+    const uploads = [];
 
-  for (const file of files) {
-    const base64 = await toBase64(file);
-    uploads.push({
-      journal_entry_id: journalEntryId,
-      file_name: file.name,
-      file_url: base64, // stores base64 string directly
-    });
+    for (const file of files) {
+      const base64 = await toBase64(file);
+      uploads.push({
+        journal_entry_id: journalEntryId,
+        file_name: file.name,
+        file_url: base64, // stores base64 string directly
+      });
+    }
+
+    const { error: attachErr } = await db
+      .from("journal_attachments")
+      .insert(uploads);
+
+    if (attachErr) console.error("Attachment upload failed:", attachErr);
   }
 
-  const { error: attachErr } = await db
-    .from("journal_attachments")
-    .insert(uploads);
-
-  if (attachErr) console.error("Attachment upload failed:", attachErr);
-}
-
-  if (initialStatus === "approved") {
-    await postApprovedEntryToLedger(journalEntryId);
-  }
+  // 🔹 NOTE: we NO LONGER auto-post to ledger here.
+  // Managers will use the Approve button, which still calls postApprovedEntryToLedger(entryId).
 
   resetJournal();
   const box = document.getElementById("journalErrors");
@@ -406,13 +405,7 @@ if (fileInput?.files?.length) {
     box.style.display = "none";
     box.innerHTML = "";
   }
-  alert(
-    `Journal entry ${
-      initialStatus === "approved"
-        ? "saved & approved"
-        : "submitted for approval"
-    }!`
-  );
+  alert("Journal entry submitted for approval!");
   loadJournalEntries(true);
 }
 
