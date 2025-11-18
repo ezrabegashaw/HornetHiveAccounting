@@ -1,15 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Journalize</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="journal.css">
+  <style>
+    .filters { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+    .filters label { display:flex; gap:.35rem; align-items:center; }
+    .search-row { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 0; }
+    .search-row input { padding:.4rem; min-width:260px; }
+    #journalErrors {
+    display:none;
+    color:#b91c1c;                /* red text */
+    background:#fee2e2;           /* light red background */
+    border:1px solid #fecaca;     /* light red border */
+    padding:.65rem .8rem;
+    border-radius:8px;
+    margin:.5rem 0 .25rem;
+    line-height:1.35;
+    }
+    #journalErrors ul { margin:.25rem 0 0 .95rem; }
+    #journalErrors .title { font-weight:600; }
+  </style>
 </head>
 
 <body class="has-sidebar">
-
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
   <div class="user">
@@ -17,10 +34,12 @@
     <span id="userName"></span>
   </div>
 </header>
+
 <script>
   const name = localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
+
   function updateClock(){
     const now = new Date();
     const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
@@ -31,50 +50,132 @@
 </script>
 
 <div class="app">
+  <!--Standardized Sidebar-->
+  <script src="../StandardLayout/ImportUI.js"></script>
+  <script>loadUI("sidebar", "../StandardLayout/SideBar.html")</script>
+  <aside class="sidebar" id="sidebar"></aside>
 
-<aside class="sidebar">
-  <div class="brand">
-    <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-  </div>
-  <ul class="nav">
-    <li><a href="Dashboard.html" >Dashboard</a></li>
-    <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-    <li><a href="#accounts">Accounts</a></li>
-    <li><a href="journal.html" aria-current="page">Journalize</a></li>
-    <li><a href="trial_balance.html">Trial Balance</a></li>
-    <li><a href="#income">Income Statement</a></li>
-    <li><a href="#balance">Balance Sheet</a></li>
-    <li><a href="#retained">Statement of Retained Earnings</a></li>
-  </ul>
-  <div class="sidebar-footer"><button class="btn">Logout</button></div>
-</aside>
+
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
+  </aside>
 
   <main class="main">
     <div class="journalBody">
       <div class="journal-card">
-        <h2>Journalize <button>+Add</button></h2>
-        <div class="form-actions">
-          <input placeholder="Search...">
-          <button>Search</button>
-        </div>
-        <div class="dateFilter form-actions">
-          <label>Start Date: <input type="date"></label>
-          <label>End Date: <input type="date"></label>
-          <button>Filter</button>
-        </div>
-        <div class="tabs">
-          <span>All</span> | <span>Approved</span> | <span>Pending</span> | <span>Rejected</span>
-        </div>
-        <hr>
+        <h2 id="journalTopTitle">Journal Entry</h2>
+        <a id="backToLedgerBtn" class="btn" style="display:none; margin:6px 0;">&larr; Back to Ledger</a>
+        
+        <div id="journalErrors"></div>
+
+        <form id="journalForm" enctype="multipart/form-data">
+        <label for="sourceDocs">Attach Documents:</label>
+        <input type="file" id="sourceDocs" multiple
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.csv" />
+        </form>
+
+        <!-- Journal Lines Table -->
         <table>
           <thead>
-            <tr><th>Type</th><th>Creator</th><th>Accounts</th><th>Debit</th><th>Credit</th></tr>
+            <tr>
+              <th>Account</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Description</th>
+              <th>Action</th>
+            </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="journalTableBody">
+            <!-- Rows added dynamically -->
+          </tbody>
         </table>
+
+        <div class="form-actions">
+          <button class="btn" id="addRowBtn">Add Row</button>
+          <button class="btn" id="submitJournalBtn">Submit Journal</button>
+          <button class="btn" id="resetJournalBtn">Reset</button>
+        </div>
+
+        <hr>
+
+        <!-- =========================
+             Submitted Journal Entries
+             (wrapped so we can hide it)
+             ========================= -->
+        <section id="submittedSection">
+          <h3>Submitted Journal Entries</h3>
+
+          <!-- Filters (any can be left blank) -->
+          <div class="filters">
+            <label>Status:
+              <select id="statusFilter">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+            <label>Start Date: <input type="date" id="startDate"></label>
+            <label>End Date: <input type="date" id="endDate"></label>
+            <button class="btn" id="filterBtn">Apply Filters</button>
+            <button class="btn" id="clearBtn">Clear</button>
+          </div>
+
+          <!-- Search inside submitted section -->
+          <div class="search-row">
+            <input id="entrySearch" type="text" placeholder="Search by account name, amount, or date (e.g., Cash, 500, 2025-10-20)">
+            <button class="btn" id="searchBtn">Search</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total Debit</th>
+                  <th>Total Credit</th>
+                  <th>Lines</th>
+                  <th>View</th>
+                  <th id="actionsHeader" style="display:none;">Actions (Mgr)</th>
+                </tr>
+              </thead>
+              <tbody id="journalEntriesTableBody">
+                <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <!-- /#submittedSection -->
+
       </div>
     </div>
   </main>
 </div>
+
+<!-- Supabase & Auth -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="journal.js"></script>
+<script src="notify.js"></script>
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  // Connect to Supabase
+  const supabase = createClient(
+    "https://rsthdogcmqwcdbqppsrm.supabase.co",  // <-- your project URL
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."   // <-- your anon key
+  );
+
+</script>
+
+<script>
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+</script>
 </body>
 </html>

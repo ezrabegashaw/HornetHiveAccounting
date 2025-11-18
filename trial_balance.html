@@ -5,11 +5,110 @@
   <meta charset="UTF-8">
   <title>Hornet Hive Accounting - Trial Balance</title>
   <link rel="stylesheet" href="main.css">
-  
+
+  <style>
+    .tb-header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .tb-header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    .tb-header h2 {
+      margin: 0.1rem 0;
+      font-size: 1.15rem;
+      font-weight: 500;
+    }
+    .tb-header p {
+      margin: 0.1rem 0;
+      color: #6b7280;
+    }
+
+    .table-wrap {
+      margin-top: 0.75rem;
+    }
+
+    table.tb {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    table.tb thead th {
+      border-bottom: 1px solid #111827;
+      padding: 0.35rem 0.35rem;
+      text-align: left;
+    }
+
+    table.tb th:nth-child(2),
+    table.tb th:nth-child(3) {
+      text-align: right;
+      padding-right: 1.5rem;
+    }
+
+    table.tb tbody td {
+      padding: 0.25rem 0.35rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    table.tb tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.tb td.num {
+      text-align: right;
+      padding-right: 1.5rem;
+      white-space: nowrap;
+    }
+
+    .tb-account-link {
+      color: #111827;
+      text-decoration: none;
+    }
+    .tb-account-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Totals row */
+    tfoot td {
+      padding: 0.35rem 0.35rem 0.15rem;
+    }
+
+    tfoot td.tb-label {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    tfoot td.tb-total {
+      text-align: right;
+      padding-right: 1.5rem;
+    }
+
+    /* Double underline only under the numbers themselves */
+    tfoot td.tb-total span {
+      display: inline-block;
+      padding: 0 0.15rem;
+      border-bottom: 3px double #000;
+    }
+
+    .tb-msg {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      text-align: right;
+    }
+    .tb-msg.tb-ok {
+      color: #15803d;
+    }
+    .tb-msg.tb-warn {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body class="has-sidebar">
-
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
   <div class="user">
@@ -17,53 +116,90 @@
     <span id="userName"></span>
   </div>
 </header>
+
 <script>
   const name = localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
-  function updateClock(){
+
+  function updateClock() {
     const now = new Date();
-    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
-                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
-    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+    const options = {
+      weekday:'short', year:'numeric', month:'short', day:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    };
+    document.getElementById('dateTime').textContent =
+      now.toLocaleString(undefined, options);
   }
-  updateClock(); setInterval(updateClock,1000);
+  updateClock();
+  setInterval(updateClock, 1000);
 </script>
 
 <div class="app">
-
-<aside class="sidebar">
-  <div class="brand">
-    <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-  </div>
-  <ul class="nav">
-    <li><a href="Dashboard.html" >Dashboard</a></li>
-    <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-    <li><a href="#accounts">Accounts</a></li>
-    <li><a href="journal.html">Journalize</a></li>
-    <li><a href="trial_balance.html" aria-current="page">Trial Balance</a></li>
-    <li><a href="#income">Income Statement</a></li>
-    <li><a href="#balance">Balance Sheet</a></li>
-    <li><a href="#retained">Statement of Retained Earnings</a></li>
-  </ul>
-  <div class="sidebar-footer"><button class="btn">Logout</button></div>
-</aside>
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="Dashboard.html">Dashboard</a></li>
+      <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="#accounts">Accounts</a></li>
+      <li><a href="journal.html">Journalize</a></li>
+      <li><a href="trial_balance.html" aria-current="page">Trial Balance</a></li>
+      <li><a href="income_statement.html">Income Statement</a></li>
+      <li><a href="balance_sheet.html">Balance Sheet</a></li>
+      <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn" id="logoutBtn">Logout</button>
+    </div>
+  </aside>
 
   <main class="main">
-    <div class="header">
+    <div class="tb-header">
       <h1>Hornet Hive Accounting</h1>
       <h2>Trial Balance</h2>
-      <p>As of August 30, 2025</p>
+      <p id="tbAsOf">As of</p>
     </div>
+
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead>
-        <tbody></tbody>
+      <table class="tb">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Debit</th>
+            <th>Credit</th>
+          </tr>
+        </thead>
+        <tbody id="tbBody">
+          <tr><td colspan="3" style="text-align:center;">Loading…</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="tb-label">Totals</td>
+            <td id="tbTotalDebit" class="tb-total num"></td>
+            <td id="tbTotalCredit" class="tb-total num"></td>
+          </tr>
+        </tfoot>
       </table>
+      <div id="tbMessage" class="tb-msg"></div>
     </div>
   </main>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
-<script>initRBAC();</script>
+<script src="trial_balance.js"></script>
+<script>
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+      if (window.supabaseClient?.auth) {
+        await window.supabaseClient.auth.signOut();
+      }
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+</script>
 </body>
 </html>

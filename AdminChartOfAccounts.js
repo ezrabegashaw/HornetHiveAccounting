@@ -1,11 +1,10 @@
-// adminChartOfAccounts.js
+// adminChartOfAccounts.js  (REPLACE THE WHOLE FILE WITH THIS)
 
 // Use the Supabase client from auth.js if available; fallback if needed
 let db = window.supabaseClient;
 if (!db && window.supabase) {
-  // Fallback — replace with your actual URL/key if not set globally
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-  const SUPABASE_ANON_KEY = "your-anon-key-here";
+  const SUPABASE_ANON_KEY = "your-anon-key-here"; // <-- replace if needed
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
@@ -13,7 +12,6 @@ if (!db && window.supabase) {
 const addBtn = document.getElementById('addAccountBtn');
 const popup = document.getElementById('popupOverlay');
 const closePopupBtn = document.getElementById('closePopup');
-const saveAccountBtn = document.getElementById('saveAccountBtn');
 const form = document.getElementById('accountForm');
 
 const deactivateBtn = document.getElementById('deactivateAccountBtn');
@@ -26,46 +24,65 @@ const tableBody = document.getElementById('accountTableBody');
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
 
+const typeFilter = document.getElementById('typeFilter');
+const numFilter  = document.getElementById('numFilter');
+const amtMin     = document.getElementById('amtMin');
+const amtMax     = document.getElementById('amtMax');
+const applyFilters = document.getElementById('applyFilters');
+const clearFilters = document.getElementById('clearFilters');
+
+// (legacy) ledger popup elements (not used when deep-linking to ledger.html)
 const ledgerPopup = document.getElementById('ledgerPopup');
 const closeLedger = document.getElementById('closeLedger');
-const ledgerTitle = document.getElementById('ledgerTitle');
-const ledgerBody = document.getElementById('ledgerTableBody');
 
-// ---------- Helpers ----------
-function openModal(el){ el.classList.add('show'); }
-function closeModal(el){ el.classList.remove('show'); }
-function asMoney(n){ return Number(n || 0).toFixed(2); }
+function openModal(el){ el?.classList.add('show'); }
+function closeModal(el){ el?.classList.remove('show'); }
+function asMoney(n){
+  return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' })
+    .format(Number(n || 0));
+}
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
-async function getUserId() {
-  try {
-    const { data } = await db.auth.getUser();
-    return data?.user?.id || 'admin';
-  } catch { return 'admin'; }
-}
+// If you don’t have a numeric user id in your app, return null for accounts.user_id (int4)
+async function getNumericUserIdOrNull() { return null; }
 
 async function logEvent(action, before, after) {
-  try {
-    await db.from('eventLog').insert([{
-      userId: await getUserId(),
-      timestamp: new Date().toISOString(),
-      action,
-      before: before ? JSON.stringify(before) : null,
-      after: after ? JSON.stringify(after) : null
-    }]);
-  } catch (e) {
-    console.warn('logEvent failed:', e?.message);
-  }
+  const { error } = await db.from('eventLog').insert([{
+    userId: await getNumericUserIdOrNull(),
+    timestamp: new Date().toISOString(),
+    action,
+    before: before ? JSON.stringify(before) : null,
+    after:  after  ? JSON.stringify(after)  : null
+  }]);
+  if (error) console.warn('logEvent failed:', error.message);
 }
 
-// ---------- Load Accounts ----------
-export async function loadAccounts(searchTerm = "") {
-  let query = db.from('accounts').select('*').eq('is_active', true);
+// ---------- Load Accounts (Admin) ----------
+export async function loadAccounts(opts = {}) {
+  const {
+    searchTerm = "",
+    type = "",
+    acctNumLike = "",
+    min = "",
+    max = ""
+  } = opts;
+
+  let query = db.from('v_account_balances').select('*');
+
   if (searchTerm) {
-    // search by name OR number
     query = query.or(`account_name.ilike.%${searchTerm}%,account_number.ilike.%${searchTerm}%`);
   }
-  const { data, error } = await query.order('account_number', { ascending: true });
+  if (type) query = query.eq('account_category', type);
+  if (acctNumLike) query = query.ilike('account_number', `%${acctNumLike}%`);
+
+  const minNum = min === "" ? null : Number(min);
+  const maxNum = max === "" ? null : Number(max);
+  if (minNum !== null && !Number.isNaN(minNum)) query = query.gte('computed_balance', minNum);
+  if (maxNum !== null && !Number.isNaN(maxNum)) query = query.lte('computed_balance', maxNum);
+
+  query = query.order('account_number', { ascending: true });
+
+  const { data, error } = await query;
 
   tableBody.innerHTML = '';
   if (error) {
@@ -73,7 +90,7 @@ export async function loadAccounts(searchTerm = "") {
     tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
     return;
   }
-  if (!data || !data.length) {
+  if (!data?.length) {
     tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No accounts found</td></tr>';
     return;
   }
@@ -81,12 +98,20 @@ export async function loadAccounts(searchTerm = "") {
   data.forEach(acc => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${acc.account_number}</td>
-      <td><span class="ledger-link" data-num="${acc.account_number}" data-name="${acc.account_name}">${acc.account_name}</span></td>
+      <td>
+        <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
+          ${acc.account_number}
+        </a>
+      </td>
+      <td>
+        <a href="ledger.html?account_id=${encodeURIComponent(acc.account_id)}" class="link">
+          ${acc.account_name}
+        </a>
+      </td>
       <td>${acc.account_category ?? ''}</td>
       <td>${acc.normal_side ?? ''}</td>
-      <td>${asMoney(acc.balance ?? acc.initial_balance ?? 0)}</td>
-      <td>${acc.user_id || 'N/A'}</td>
+      <td>${asMoney(acc.computed_balance)}</td>
+      <td>${acc.user_id ?? 'N/A'}</td>
       <td>${acc.date_added ? new Date(acc.date_added).toLocaleDateString() : ''}</td>
       <td>${acc.comment || ''}</td>
     `;
@@ -94,48 +119,13 @@ export async function loadAccounts(searchTerm = "") {
   });
 }
 
-// ---------- Ledger ----------
-async function openLedger(accountNumber, accountName) {
-  openModal(ledgerPopup);
-  ledgerTitle.textContent = `Ledger for ${accountName} (${accountNumber})`;
-  ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
-
-  const { data, error } = await db
-    .from('ledger')
-    .select('*')
-    .eq('account_number', accountNumber)
-    .order('date', { ascending: true });
-
-  if (error) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Error loading ledger</td></tr>';
-    console.error(error.message);
-    return;
-  }
-  if (!data?.length) {
-    ledgerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No transactions found</td></tr>';
-    return;
-  }
-
-  ledgerBody.innerHTML = '';
-  data.forEach(entry => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</td>
-      <td>${entry.description || ''}</td>
-      <td>${entry.debit ? Number(entry.debit).toFixed(2) : ''}</td>
-      <td>${entry.credit ? Number(entry.credit).toFixed(2) : ''}</td>
-      <td>${entry.balance ? Number(entry.balance).toFixed(2) : ''}</td>
-    `;
-    ledgerBody.appendChild(row);
-  });
-}
-
-// ---------- Populate Deactivate Select ----------
+// ---------- Deactivate dropdown ----------
 async function populateDeactivateOptions() {
   const { data, error } = await db.from('accounts')
     .select('account_number, account_name')
     .eq('is_active', true)
     .order('account_number');
+
   deactivateSelect.innerHTML = '<option value="">-- Select an Account --</option>';
   if (error) return;
   (data || []).forEach(a => {
@@ -146,7 +136,7 @@ async function populateDeactivateOptions() {
   });
 }
 
-// ---------- Add Account Submit ----------
+// ---------- Add Account ----------
 async function submitAccount(e) {
   e.preventDefault();
 
@@ -155,25 +145,23 @@ async function submitAccount(e) {
     account_number: document.getElementById('account_number').value.trim(),
     normal_side: document.getElementById('normal_side').value,
     account_category: document.getElementById('account_category').value.trim(),
-    account_subcategory: document.getElementById('account_subcategory').value.trim() || null,
-    initial_balance: asMoney(document.getElementById('initial_balance').value),
-    order: document.getElementById('account_order').value.trim() || null,
+    account_subcategory: (document.getElementById('account_subcategory').value.trim() || null),
+    initial_balance: Number(document.getElementById('initial_balance').value || 0),
+    account_order: (document.getElementById('account_order').value.trim() || null),
     statement_type: document.getElementById('statement_type').value,
-    description: document.getElementById('account_description').value.trim() || null,
-    comment: document.getElementById('comment').value.trim() || null,
+    account_description: (document.getElementById('account_description').value.trim() || null),
+    comment: (document.getElementById('comment').value.trim() || null),
     is_active: true,
     date_added: new Date().toISOString(),
-    user_id: await getUserId()
+    user_id: await getNumericUserIdOrNull()
   };
 
-  // Basic validation
   if (!account.account_name) return alert('Account name is required.');
   if (!isDigitsOnly(account.account_number)) return alert('Account number must be digits only.');
   if (!account.normal_side) return alert('Please choose a Normal Side.');
   if (!account.account_category) return alert('Category is required.');
   if (!account.statement_type) return alert('Please choose a Statement Type.');
 
-  // Duplicate check (name or number)
   const { data: existing, error: dupErr } = await db
     .from('accounts')
     .select('account_name, account_number')
@@ -189,7 +177,6 @@ async function submitAccount(e) {
     return;
   }
 
-  // Insert
   const { error } = await db.from('accounts').insert([account]);
   if (error) {
     alert('Error adding account: ' + error.message);
@@ -198,16 +185,12 @@ async function submitAccount(e) {
 
   await logEvent('add_account', null, account);
   alert('Account added successfully.');
-
-  // Reset & close
   form.reset();
   closeModal(popup);
-
-  // Refresh list
-  await loadAccounts(searchInput.value.trim());
+  await loadAccounts(currentFilters());
 }
 
-// ---------- Deactivate Submit ----------
+// ---------- Deactivate ----------
 async function submitDeactivate(e) {
   e.preventDefault();
   const acctNum = deactivateSelect.value;
@@ -223,47 +206,53 @@ async function submitDeactivate(e) {
 
   alert('Account deactivated.');
   closeModal(deactivateOverlay);
-  await loadAccounts(searchInput.value.trim());
+  await loadAccounts(currentFilters());
+}
+
+// ---------- Helpers ----------
+function currentFilters() {
+  return {
+    searchTerm: (searchInput?.value || '').trim(),
+    type: typeFilter?.value || '',
+    acctNumLike: (numFilter?.value || '').trim(),
+    min: amtMin?.value || '',
+    max: amtMax?.value || ''
+  };
 }
 
 // ---------- Events ----------
 document.addEventListener('DOMContentLoaded', () => {
-  // Initial table load
   loadAccounts();
 
-  // Search
-  searchBtn?.addEventListener('click', () => {
-    loadAccounts(searchInput.value.trim());
+  // Search/filters
+  const run = () => loadAccounts(currentFilters());
+  applyFilters?.addEventListener('click', run);
+  clearFilters?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    if (typeFilter) typeFilter.value = '';
+    if (numFilter) numFilter.value = '';
+    if (amtMin) amtMin.value = '';
+    if (amtMax) amtMax.value = '';
+    loadAccounts();
   });
+  searchBtn?.addEventListener('click', run);
+  searchInput?.addEventListener('keyup', (e) => { if (e.key === 'Enter') run(); });
 
-  // Open/close Add popup
-  addBtn?.addEventListener('click', async () => { openModal(popup); });
+  // Add account popup
+  addBtn?.addEventListener('click', () => openModal(popup));
   closePopupBtn?.addEventListener('click', () => closeModal(popup));
   popup?.addEventListener('click', (e) => { if (e.target === popup) closeModal(popup); });
-
-  // Submit new account
   form?.addEventListener('submit', submitAccount);
 
-  // Open/close Deactivate popup
+  // Deactivate popup
   deactivateBtn?.addEventListener('click', async () => {
     await populateDeactivateOptions();
     openModal(deactivateOverlay);
   });
   closeDeactivateBtn?.addEventListener('click', () => closeModal(deactivateOverlay));
   deactivateOverlay?.addEventListener('click', (e) => { if (e.target === deactivateOverlay) closeModal(deactivateOverlay); });
-  deactivateForm?.addEventListener('submit', submitDeactivate);
 
-  // Ledger link clicks (event delegation)
-  tableBody?.addEventListener('click', (e) => {
-    const link = e.target.closest('.ledger-link');
-    if (link) {
-      const num = link.getAttribute('data-num');
-      const name = link.getAttribute('data-name');
-      openLedger(num, name);
-    }
-  });
-
-  // Close ledger
+  // Legacy popup close (not used now)
   closeLedger?.addEventListener('click', () => closeModal(ledgerPopup));
   ledgerPopup?.addEventListener('click', (e) => { if (e.target === ledgerPopup) closeModal(ledgerPopup); });
 });

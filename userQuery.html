@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .reject-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            padding: 5px 10px;
+        }
+        .reject-btn:hover {
+            background-color: #cc0000;
+        }
+        .approve-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        .approve-btn:hover {
+            background-color: #45a049;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .popup-buttons {
+            margin-top: 15px;
+            text-align: right;
+        }
+        .popup-buttons button {
+            margin-left: 10px;
+            padding: 5px 15px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .popup-confirm {
+            background-color: #ff4444;
+            color: white;
+        }
+        .popup-cancel {
+            background-color: #999;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <link rel="stylesheet" href="main.css">
+
+    <div class="table-wrap">
+      <table id="userTable">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Active</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Confirmation Popup -->
+    <div class="popup-overlay" id="popupOverlay"></div>
+    <div class="popup" id="confirmationPopup">
+        <h3>Confirm Rejection</h3>
+        <p>Are you sure you want to reject this user? This action cannot be undone.</p>
+        <div class="popup-buttons">
+            <button class="popup-cancel" id="cancelButton">Cancel</button>
+            <button class="popup-confirm" id="confirmReject">Confirm Reject</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+    <script type="module">
+        //Import createClient from global supabase object
+        const { createClient } = supabase;
+
+        //Supabase project info
+        const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+        //Initialize Supabase client
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.USE_SUPABASE = true;
+
+        async function getUsers() {
+            const {data, error} = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('approved', false);
+
+            if (error) {
+                console.error('Error fetching users:', error);
+                return;
+            }
+
+            const tableBody = document.getElementById('userTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            if (!data || data.length === 0) {
+                console.log('No users found');
+                return;
+            }
+
+            data.forEach(user => {
+                const newRow = tableBody.insertRow();
+
+                const email = newRow.insertCell(0);
+                email.textContent = user.email;
+
+                const name = newRow.insertCell(1);
+                name.textContent = user.first_name + " " + user.last_name;
+
+                const role = newRow.insertCell(2);
+                role.textContent = user.role;
+
+                const active = newRow.insertCell(3);
+                active.textContent = user.active ? '✅' : '❌';
+
+                //Actions Function
+                const actionCell = newRow.insertCell(4);
+                const approveButton = document.createElement('button');
+                approveButton.textContent = 'Approve';
+                approveButton.className = 'approve-btn';
+                approveButton.onclick = () => approveUser(user.id);
+
+                const rejectButton = document.createElement('button');
+                rejectButton.textContent = 'Reject';
+                rejectButton.className = 'reject-btn';
+                rejectButton.onclick = () => showPopup(user.id);
+                
+                actionCell.appendChild(approveButton);
+                actionCell.appendChild(rejectButton);
+                
+            });
+        }
+
+        async function approveUser(userID) {
+            const {error} = await supabaseClient
+                .from('users')
+                .update({approved: true, active: true})
+                .eq('id', userID)
+
+            getUsers();
+        }
+
+        async function rejectUser(userID) {
+
+
+            const {error} = await supabaseClient
+                .from('users')
+                .delete()
+                .eq('id', userID);
+            
+            getUsers();
+            
+        }
+
+        getUsers();
+
+        function showPopup(userID) {
+            document.getElementById('popupOverlay').style.display = 'block';
+            document.getElementById('confirmationPopup').style.display = 'block';
+            
+            // Set up the confirm button to call rejectUser with the correct ID
+            document.getElementById('confirmReject').onclick = async () => {
+                await rejectUser(userID);
+                closePopup();
+            };
+        }
+
+        function closePopup() {
+            document.getElementById('popupOverlay').style.display = 'none';
+            document.getElementById('confirmationPopup').style.display = 'none';
+        }
+
+        // Close popup if clicking outside
+        document.getElementById('popupOverlay').onclick = closePopup;
+        
+        // Add click handler for cancel button
+        document.getElementById('cancelButton').onclick = closePopup;
+    </script>
+</body>
+</html>
