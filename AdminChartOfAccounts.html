@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
@@ -12,27 +11,19 @@
     .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000}
     .popup-overlay.show{display:flex}
     .popup-card{background:#fff;border-radius:12px;max-width:620px;width:95%;padding:1rem 1.25rem 1.25rem}
-
-    /* ✅ Single-column, vertical form layout for Add Account */
     .form-vertical{display:flex;flex-direction:column;gap:.75rem}
     .form-vertical .field{display:flex;flex-direction:column;gap:.35rem}
-    .form-vertical label{font-weight:600}
-    .form-vertical input,
-    .form-vertical select,
-    .form-vertical textarea{
-      padding:.55rem .6rem;border:1px solid #e5e7eb;border-radius:8px;width:100%;
-      background:#fff; min-height:40px;
-    }
-    .form-vertical textarea{min-height:80px; resize:vertical}
-
+    .form-vertical input,.form-vertical select,.form-vertical textarea{padding:.55rem .6rem;border:1px solid #e5e7eb;border-radius:8px;width:100%;background:#fff;min-height:40px}
+    .form-vertical textarea{min-height:80px;resize:vertical}
     .form-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.35rem}
     .button,.btn,button{cursor:pointer}
-
-    /* legacy popup (unused now) */
     .ledger-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:999}
     .ledger-popup .ledger-card{background:#fff;border-radius:12px;max-width:900px;width:95%;padding:1rem}
     .ledger-close{float:right}
-    a.link{ color:#0a58ca; text-decoration:underline; }
+    a.link{color:#0a58ca;text-decoration:underline}
+    .filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:end}
+    .filters .field{display:flex;flex-direction:column;gap:.25rem}
+    .filters input,.filters select{min-width:150px;padding:.45rem;border:1px solid #e5e7eb;border-radius:8px}
   </style>
 </head>
 
@@ -69,9 +60,41 @@
   <main class="main">
     <div class="header">
       <h1>Chart of Accounts (Admin)</h1>
-      <div class="form-actions">
-        <input type="text" id="searchInput" placeholder="Search by name or number">
-        <button id="searchBtn">Search</button>
+      <div class="form-actions" style="gap:.75rem;flex-wrap:wrap">
+        <!-- Search + Filters -->
+        <div class="filters">
+          <div class="field">
+            <label for="searchInput">Search (name/number)</label>
+            <input type="text" id="searchInput" placeholder="Search by name or number">
+          </div>
+          <div class="field">
+            <label for="typeFilter">Account Type</label>
+            <select id="typeFilter">
+              <option value="">All</option>
+              <option>Asset</option>
+              <option>Liability</option>
+              <option>Equity</option>
+              <option>Revenue</option>
+              <option>Expense</option>
+              <option>Contra Asset</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="numFilter">Acct # (prefix/contains)</label>
+            <input id="numFilter" type="text" placeholder="e.g. 10, 110, or 1">
+          </div>
+          <div class="field">
+            <label>Amount Min</label>
+            <input id="amtMin" type="number" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label>Amount Max</label>
+            <input id="amtMax" type="number" step="0.01" placeholder="999999.99">
+          </div>
+          <button id="applyFilters" class="button">Apply</button>
+          <button id="clearFilters" class="button">Clear</button>
+        </div>
+
         <button id="addAccountBtn" class="button">Add Account</button>
         <button id="deactivateAccountBtn" class="button">Deactivate Account</button>
       </div>
@@ -97,20 +120,13 @@
   </main>
 </div>
 
-<!-- (legacy) Ledger Popup – kept for compatibility but not used by the new links -->
 <div id="ledgerPopup" class="ledger-popup">
   <div class="ledger-card">
     <button class="ledger-close" id="closeLedger">Close</button>
     <h2 id="ledgerTitle">Account Ledger</h2>
     <table class="ledger-table">
       <thead>
-        <tr>
-          <th>Date</th>
-          <th>Description</th>
-          <th>Debit</th>
-          <th>Credit</th>
-          <th>Account Balance</th>
-        </tr>
+        <tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Account Balance</th></tr>
       </thead>
       <tbody id="ledgerTableBody">
         <tr><td colspan="5" style="text-align:center;">Select an account to view transactions</td></tr>
@@ -119,65 +135,28 @@
   </div>
 </div>
 
-<!-- ✅ Add Account Popup (single column) -->
+<!-- Add Account Popup -->
 <div id="popupOverlay" class="popup-overlay">
   <div class="popup-card card">
     <h2 class="popup-title">Add New Account</h2>
     <form id="accountForm" class="form-vertical" novalidate>
-      <div class="field">
-        <label for="account_name">Account Name</label>
-        <input type="text" id="account_name" required>
+      <div class="field"><label for="account_name">Account Name</label><input type="text" id="account_name" required></div>
+      <div class="field"><label for="account_number">Account Number</label><input type="text" id="account_number" required inputmode="numeric" pattern="^[0-9]+$"></div>
+      <div class="field"><label for="normal_side">Normal Side</label>
+        <select id="normal_side" required><option value="">Select...</option><option>Debit</option><option>Credit</option></select>
       </div>
-      <div class="field">
-        <label for="account_number">Account Number</label>
-        <input type="text" id="account_number" required inputmode="numeric" pattern="^[0-9]+$">
-      </div>
-      <div class="field">
-        <label for="normal_side">Normal Side</label>
-        <select id="normal_side" required>
-          <option value="">Select...</option>
-          <option value="Debit">Debit</option>
-          <option value="Credit">Credit</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="account_category">Category</label>
-        <input type="text" id="account_category" required>
-      </div>
-      <div class="field">
-        <label for="account_subcategory">Subcategory</label>
-        <input type="text" id="account_subcategory">
-      </div>
-      <div class="field">
-        <label for="initial_balance">Initial Balance</label>
-        <input type="number" id="initial_balance" step="0.01" value="0.00">
-      </div>
-      <div class="field">
-        <label for="account_order">Order</label>
-        <input type="text" id="account_order" placeholder="e.g. 01">
-      </div>
-      <div class="field">
-        <label for="statement_type">Statement Type</label>
+      <div class="field"><label for="account_category">Category</label><input type="text" id="account_category" required></div>
+      <div class="field"><label for="account_subcategory">Subcategory</label><input type="text" id="account_subcategory"></div>
+      <div class="field"><label for="initial_balance">Initial Balance</label><input type="number" id="initial_balance" step="0.01" value="0.00"></div>
+      <div class="field"><label for="account_order">Order</label><input type="text" id="account_order" placeholder="e.g. 01"></div>
+      <div class="field"><label for="statement_type">Statement Type</label>
         <select id="statement_type" required>
-          <option value="">Select...</option>
-          <option value="IS">Income Statement</option>
-          <option value="BS">Balance Sheet</option>
-          <option value="RE">Retained Earnings</option>
+          <option value="">Select...</option><option value="IS">Income Statement</option><option value="BS">Balance Sheet</option><option value="RE">Retained Earnings</option>
         </select>
       </div>
-      <div class="field">
-        <label for="account_description">Description</label>
-        <textarea id="account_description" rows="2"></textarea>
-      </div>
-      <div class="field">
-        <label for="comment">Comment</label>
-        <textarea id="comment" rows="2"></textarea>
-      </div>
-
-      <div class="form-actions popup-actions">
-        <button type="submit" id="saveAccountBtn">Save Account</button>
-        <button type="button" class="button cancel-btn" id="closePopup">Cancel</button>
-      </div>
+      <div class="field"><label for="account_description">Description</label><textarea id="account_description" rows="2"></textarea></div>
+      <div class="field"><label for="comment">Comment</label><textarea id="comment" rows="2"></textarea></div>
+      <div class="form-actions popup-actions"><button type="submit" id="saveAccountBtn">Save Account</button><button type="button" class="button cancel-btn" id="closePopup">Cancel</button></div>
     </form>
   </div>
 </div>
@@ -187,36 +166,26 @@
   <div class="popup-card card">
     <h2 class="popup-title">Deactivate Account</h2>
     <form id="deactivateForm" class="form-vertical">
-      <div class="field">
-        <label for="deactivateAccountSelect">Select Account</label>
-        <select id="deactivateAccountSelect" required>
-          <option value="">-- Select an Account --</option>
-        </select>
+      <div class="field"><label for="deactivateAccountSelect">Select Account</label>
+        <select id="deactivateAccountSelect" required><option value="">-- Select an Account --</option></select>
       </div>
-      <div class="form-actions popup-actions">
-        <button type="submit">Deactivate</button>
-        <button type="button" class="button cancel-btn" id="closeDeactivatePopup">Cancel</button>
-      </div>
+      <div class="form-actions popup-actions"><button type="submit">Deactivate</button><button type="button" class="button cancel-btn" id="closeDeactivatePopup">Cancel</button></div>
     </form>
   </div>
 </div>
 
 <div id="calendarContainer"></div>
 
-<!-- Supabase + auth bootstrap (auth.js should create window.supabaseClient) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
-
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
-    localStorage.removeItem('username');
-    location.href = 'HornetHiveLogin.html';
+    localStorage.removeItem('username'); location.href = 'HornetHiveLogin.html';
   });
 </script>
 
-<!-- Page logic -->
 <script src="adminChartOfAccounts.js" type="module"></script>
 </body>
 </html>

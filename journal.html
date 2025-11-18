@@ -167,19 +167,6 @@
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."   // <-- your anon key
   );
 
-function showNavIfAccountant() {
-  const role = localStorage.getItem("role");
-  console.log("User role:", role);
-
-  if (role === "Accountant") {
-    document.getElementById("accountantNav").style.display = "block";
-  } else {
-    document.getElementById("accountantNav").style.display = "none";
-  }
-}
-
-showNavIfAccountant();
-
 </script>
 
 <script>
