@@ -4,11 +4,19 @@ const { createClient } = supabase;
 
 // Supabase project info
 const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-// Initialize Supabase client
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.supabaseClient = supabaseClient;
+/*
+   IMPORTANT:
+   Create ONE global supabaseClient for the whole app.
+   If it already exists (from another page), reuse it.
+*/
+if (!window.supabaseClient) {
+  window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+const supabaseClient = window.supabaseClient;
 window.USE_SUPABASE = true;
 
 /* ----------------------------------------------------------------

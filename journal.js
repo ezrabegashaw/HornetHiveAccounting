@@ -1,5 +1,48 @@
-// journal.js
+// journal.js — with built-in event logging for journal + ledger
+
 const db = window.supabaseClient;
+
+// -----------------------------
+// Simple event log helper (matches your table definition)
+// -----------------------------
+async function logEvent({ action, entity, entityId, before, after }) {
+  if (!db) {
+    alert("logEvent: supabaseClient is not available.");
+    return;
+  }
+
+  const username =
+    (window.CURRENT_USER && CURRENT_USER.username) ||
+    localStorage.getItem("username") ||
+    "N/A";
+  const userId = (window.CURRENT_USER && CURRENT_USER.id) || null;
+
+  const row = {
+    action: action || "Event",             // text NOT NULL
+    entity: entity || "Unknown",           // text NOT NULL (your table requires this)
+    entity_id: entityId != null ? String(entityId) : null, // your column is text
+    user_name: username,
+    user_id: userId != null ? String(userId) : null,
+    // timestamp has a DEFAULT in your table, so we can omit it OR set it
+    // If we leave it out, Postgres will use now()
+    before: before || null,                // jsonb
+    after: after || null,                  // jsonb
+  };
+
+  try {
+    const { error } = await db.from("event_log").insert([row]);
+    if (error) {
+      console.error("Error inserting into event_log:", error);
+      alert("Error logging event: " + error.message);
+    } else {
+      console.log("Event logged:", row);
+    }
+  } catch (e) {
+    console.error("Unexpected error logging event:", e);
+    alert("Unexpected error logging event: " + (e.message || e));
+  }
+}
+
 
 // --- Money formatting helper ---
 function fmtMoney(value) {
@@ -23,24 +66,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Compose events (entry form)
   document.getElementById("addRowBtn").addEventListener("click", addJournalRow);
-  document.getElementById("submitJournalBtn").addEventListener("click", submitJournalEntry);
-  document.getElementById("resetJournalBtn").addEventListener("click", resetJournal);
+  document
+    .getElementById("submitJournalBtn")
+    .addEventListener("click", submitJournalEntry);
+  document
+    .getElementById("resetJournalBtn")
+    .addEventListener("click", resetJournal);
 
   // Filters (any field can be blank)
-  document.getElementById("filterBtn")?.addEventListener("click", () => loadJournalEntries(false));
+  document.getElementById("filterBtn")?.addEventListener("click", () =>
+    loadJournalEntries(false)
+  );
   document.getElementById("clearBtn")?.addEventListener("click", () => {
-    const sf = document.getElementById("statusFilter"); if (sf) sf.value = "all";
-    const sd = document.getElementById("startDate"); if (sd) sd.value = "";
-    const ed = document.getElementById("endDate");   if (ed) ed.value = "";
-    const es = document.getElementById("entrySearch"); if (es) es.value = "";
+    const sf = document.getElementById("statusFilter");
+    if (sf) sf.value = "all";
+    const sd = document.getElementById("startDate");
+    if (sd) sd.value = "";
+    const ed = document.getElementById("endDate");
+    if (ed) ed.value = "";
+    const es = document.getElementById("entrySearch");
+    if (es) es.value = "";
     loadJournalEntries(true); // show all
   });
 
   // Search (submitted section)
-  document.getElementById("searchBtn")?.addEventListener("click", () => loadJournalEntries(false));
-  document.getElementById("entrySearch")?.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") loadJournalEntries(false);
-  });
+  document.getElementById("searchBtn")?.addEventListener("click", () =>
+    loadJournalEntries(false)
+  );
+  document
+    .getElementById("entrySearch")
+    ?.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") loadJournalEntries(false);
+    });
 
   // Managers can see Actions column
   if (CURRENT_USER.role === "manager") {
@@ -105,7 +162,7 @@ function addJournalRow() {
   const accountSelect = document.createElement("select");
   accountSelect.className = "accountSelect";
   accountSelect.innerHTML = `<option value="">Select account</option>`;
-  accountOptions.forEach(a => {
+  accountOptions.forEach((a) => {
     const opt = document.createElement("option");
     opt.value = String(a.account_id);
     opt.textContent = a.account_name;
@@ -134,11 +191,16 @@ function addJournalRow() {
   removeBtn.type = "button";
   removeBtn.textContent = "Remove";
 
-  const td1 = document.createElement("td"); td1.appendChild(accountSelect);
-  const td2 = document.createElement("td"); td2.appendChild(debit);
-  const td3 = document.createElement("td"); td3.appendChild(credit);
-  const td4 = document.createElement("td"); td4.appendChild(desc);
-  const td5 = document.createElement("td"); td5.appendChild(removeBtn);
+  const td1 = document.createElement("td");
+  td1.appendChild(accountSelect);
+  const td2 = document.createElement("td");
+  td2.appendChild(debit);
+  const td3 = document.createElement("td");
+  td3.appendChild(credit);
+  const td4 = document.createElement("td");
+  td4.appendChild(desc);
+  const td5 = document.createElement("td");
+  td5.appendChild(removeBtn);
 
   row.append(td1, td2, td3, td4, td5);
   tbody.appendChild(row);
@@ -161,7 +223,10 @@ function resetJournal() {
   addJournalRow();
 
   const box = document.getElementById("journalErrors");
-  if (box) { box.style.display = "none"; box.innerHTML = ""; }
+  if (box) {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
 }
 
 function getAllRows() {
@@ -170,7 +235,7 @@ function getAllRows() {
 
 function getSelectedAccountIds() {
   const ids = [];
-  getAllRows().forEach(r => {
+  getAllRows().forEach((r) => {
     const val = r.querySelector(".accountSelect")?.value || "";
     if (val) ids.push(val);
   });
@@ -185,16 +250,16 @@ function refreshAccountSelectOptions() {
   const rows = getAllRows();
   const selected = getSelectedAccountIds(); // strings
 
-  rows.forEach(r => {
+  rows.forEach((r) => {
     const sel = r.querySelector(".accountSelect");
     if (!sel) return;
     const current = sel.value;
 
-    const taken = new Set(selected.filter(id => id !== current));
+    const taken = new Set(selected.filter((id) => id !== current));
     const previous = current;
 
     sel.innerHTML = `<option value="">Select account</option>`;
-    accountOptions.forEach(a => {
+    accountOptions.forEach((a) => {
       const id = String(a.account_id);
       if (taken.has(id)) return;
       const opt = document.createElement("option");
@@ -203,7 +268,7 @@ function refreshAccountSelectOptions() {
       sel.appendChild(opt);
     });
 
-    if (previous && Array.from(sel.options).some(o => o.value === previous)) {
+    if (previous && Array.from(sel.options).some((o) => o.value === previous)) {
       sel.value = previous;
     } else if (previous) {
       sel.value = "";
@@ -213,12 +278,6 @@ function refreshAccountSelectOptions() {
 
 /**
  * Validate the journal entry.
- * Rules:
- *  - At least 1 row
- *  - Each row: one side only (debit XOR credit), amount > 0
- *  - No duplicate accounts
- *  - Debits must equal credits
- *  - Debits must be listed first (no debit lines after any credit line)
  */
 function validateJournal(render = false) {
   const errors = [];
@@ -252,13 +311,17 @@ function validateJournal(render = false) {
     const hasCredit = c > 0;
 
     if ((hasDebit && hasCredit) || (!hasDebit && !hasCredit)) {
-      errors.push(`Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`);
+      errors.push(
+        `Line ${lineNum}: enter either a positive Debit OR a positive Credit (not both).`
+      );
     }
 
     if (hasCredit) {
       seenCreditAlready = true;
     } else if (hasDebit && seenCreditAlready) {
-      errors.push(`Line ${lineNum}: Debits must be listed before credits. Move this debit line above all credit lines.`);
+      errors.push(
+        `Line ${lineNum}: Debits must be listed before credits. Move this debit line above all credit lines.`
+      );
     }
 
     totalDebit += d;
@@ -290,7 +353,7 @@ function validateJournal(render = false) {
       errorBox.style.display = "block";
       errorBox.innerHTML = `
         <div class="title">Please fix the following:</div>
-        <ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul>
+        <ul>${errors.map((e) => `<li>${e}</li>`).join("")}</ul>
       `;
       errorBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else {
@@ -302,6 +365,9 @@ function validateJournal(render = false) {
   return { ok: errors.length === 0, errors };
 }
 
+// =========================
+// SUBMIT JOURNAL ENTRY
+// =========================
 async function submitJournalEntry() {
   const { ok } = validateJournal(true);
   if (!ok) return;
@@ -322,7 +388,7 @@ async function submitJournalEntry() {
     lines.push({ account_id: Number(accountId), debit, credit, description });
   }
 
-  // 🔹 CHANGE: all entries start as "pending" now (even managers)
+  // ✅ ALWAYS pending (manager and accountant)
   const initialStatus = "pending";
 
   const { data: entryData, error: entryError } = await db
@@ -374,7 +440,7 @@ async function submitJournalEntry() {
     return;
   }
 
-  // === Handle attachments (simple base64 storage) ===
+  // Attachments
   const fileInput = document.getElementById("sourceDocs");
   if (fileInput?.files?.length) {
     const files = Array.from(fileInput.files);
@@ -385,7 +451,7 @@ async function submitJournalEntry() {
       uploads.push({
         journal_entry_id: journalEntryId,
         file_name: file.name,
-        file_url: base64, // stores base64 string directly
+        file_url: base64,
       });
     }
 
@@ -396,8 +462,14 @@ async function submitJournalEntry() {
     if (attachErr) console.error("Attachment upload failed:", attachErr);
   }
 
-  // 🔹 NOTE: we NO LONGER auto-post to ledger here.
-  // Managers will use the Approve button, which still calls postApprovedEntryToLedger(entryId).
+  // 🔹 Log creation event
+  await logEvent({
+    action: "Journal Entry Submitted",
+    entity: "Journal Entry",
+    entityId: journalEntryId,
+    before: null,
+    after: entryData,
+  });
 
   resetJournal();
   const box = document.getElementById("journalErrors");
@@ -409,22 +481,65 @@ async function submitJournalEntry() {
   loadJournalEntries(true);
 }
 
+// =========================
+// APPROVE ENTRY
+// =========================
 async function approveEntry(entryId) {
+  // BEFORE snapshot
+  const { data: beforeEntry } = await db
+    .from("journal_entries")
+    .select("*")
+    .eq("entry_id", entryId)
+    .maybeSingle();
+
   const { error: upErr } = await db
     .from("journal_entries")
     .update({ status: "approved" })
     .eq("entry_id", entryId);
 
-  if (upErr) return alert("Failed to approve entry.");
+  if (upErr) {
+    alert("Failed to approve entry.");
+    return;
+  }
+
+  // AFTER snapshot
+  const { data: afterEntry } = await db
+    .from("journal_entries")
+    .select("*")
+    .eq("entry_id", entryId)
+    .maybeSingle();
+
+  // Log event
+  await logEvent({
+    action: "Journal Entry Approved",
+    entity: "Journal Entry",
+    entityId: entryId,
+    before: beforeEntry || null,
+    after: afterEntry || null,
+  });
+
   await postApprovedEntryToLedger(entryId);
 
   alert("Entry approved and posted to ledger.");
   loadJournalEntries(false);
 }
 
+// =========================
+// REJECT ENTRY
+// =========================
 async function rejectEntry(entryId) {
   const comment = prompt("Enter rejection reason (required):");
-  if (!comment?.trim()) return alert("A rejection comment is required.");
+  if (!comment?.trim()) {
+    alert("A rejection comment is required.");
+    return;
+  }
+
+  // BEFORE snapshot
+  const { data: beforeEntry } = await db
+    .from("journal_entries")
+    .select("*")
+    .eq("entry_id", entryId)
+    .maybeSingle();
 
   const { error } = await db
     .from("journal_entries")
@@ -434,7 +549,26 @@ async function rejectEntry(entryId) {
     })
     .eq("entry_id", entryId);
 
-  if (error) return alert("Failed to reject entry.");
+  if (error) {
+    alert("Failed to reject entry.");
+    return;
+  }
+
+  // AFTER snapshot
+  const { data: afterEntry } = await db
+    .from("journal_entries")
+    .select("*")
+    .eq("entry_id", entryId)
+    .maybeSingle();
+
+  await logEvent({
+    action: "Journal Entry Rejected",
+    entity: "Journal Entry",
+    entityId: entryId,
+    before: beforeEntry || null,
+    after: afterEntry || null,
+  });
+
   alert("Entry rejected.");
   loadJournalEntries(false);
 }
@@ -471,24 +605,42 @@ async function postApprovedEntryToLedger(entryId) {
         : Number(line.credit || 0) - Number(line.debit || 0);
       const newBal = Number((currentBal + delta).toFixed(2));
 
-      await db.from("ledger").insert([
-        {
-          journal_entry_id: entryId,
-          account_number: acc.account_number,
-          account_name: acc.account_name,
-          date: entry.date,
-          description: line.description || `Journal #${entryId}`,
-          debit: line.debit || null,
-          credit: line.credit || null,
-          balance: newBal,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const ledgerRow = {
+        journal_entry_id: entryId,
+        account_number: acc.account_number,
+        account_name: acc.account_name,
+        date: entry.date,
+        description: line.description || `Journal #${entryId}`,
+        debit: line.debit || null,
+        credit: line.credit || null,
+        balance: newBal,
+        created_at: new Date().toISOString(),
+      };
+
+      await db.from("ledger").insert([ledgerRow]);
 
       await db
         .from("accounts")
         .update({ balance: newBal })
         .eq("account_id", acc.account_id);
+
+      // Log ledger change
+      await logEvent({
+        action: "Ledger Posted",
+        entity: "Ledger",
+        entityId: entryId,
+        before: {
+          account_id: acc.account_id,
+          previous_balance: currentBal,
+        },
+        after: {
+          account_id: acc.account_id,
+          new_balance: newBal,
+          journal_entry_id: entryId,
+          debit: line.debit || 0,
+          credit: line.credit || 0,
+        },
+      });
     }
   } catch (e) {
     return e;
@@ -595,7 +747,6 @@ async function loadJournalEntries(showAll) {
         const isDebit = debit > 0;
         const isCredit = credit > 0;
 
-        // Indent credit account names
         const baseName = l.accounts?.account_name || "";
         const label = (isCredit ? "&nbsp;&nbsp;&nbsp;" : "") + baseName;
 
@@ -625,8 +776,8 @@ async function loadJournalEntries(showAll) {
       <td>${fmtMoney(entry.total_credit)}</td>
       <td>${linesHtml}</td>
       <td>
-      <a href="journal.html?entry_id=${entry.entry_id}">View</a>
-      <button class="view-docs-btn" data-id="${entry.entry_id}" style="margin-left:6px;">Docs</button>
+        <a href="journal.html?entry_id=${entry.entry_id}">View</a>
+        <button class="view-docs-btn" data-id="${entry.entry_id}" style="margin-left:6px;">Docs</button>
       </td>
       <td style="display:${CURRENT_USER.role === "manager" ? "" : "none"};">
         ${canAct ? actionButtons(entry.entry_id) : ""}
@@ -648,10 +799,9 @@ async function downloadJournalAttachments(entryId) {
       return;
     }
 
-    // Trigger download for each file
-    data.forEach(att => {
+    data.forEach((att) => {
       const a = document.createElement("a");
-      a.href = att.file_url; // base64 stored in file_url
+      a.href = att.file_url;
       a.download = att.file_name;
       document.body.appendChild(a);
       a.click();
@@ -663,23 +813,13 @@ async function downloadJournalAttachments(entryId) {
   }
 }
 
-
 // Event delegation for Docs buttons
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".view-docs-btn");
-  if (!btn) return;
-  const entryId = Number(btn.dataset.id);
-  if (entryId) showJournalAttachments(entryId);
-});
-
-// Handle Docs button click
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".view-docs-btn");
   if (!btn) return;
   const entryId = Number(btn.dataset.id);
   if (entryId) downloadJournalAttachments(entryId);
 });
-
 
 // -------------------------
 // PR deep-link: show ONLY the single journal
