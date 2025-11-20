@@ -7,9 +7,32 @@
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="chart_override.css">
   <style>
-    .filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:end;margin-left:auto}
-    .filters .field{display:flex;flex-direction:column;gap:.25rem}
-    .filters input,.filters select{min-width:150px;padding:.45rem;border:1px solid #e5e7eb;border-radius:8px}
+    .filters{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.5rem;
+      align-items:end;
+      margin-left:auto
+    }
+    .filters .field{
+      display:flex;
+      flex-direction:column;
+      gap:.25rem
+    }
+    .filters input,
+    .filters select{
+      min-width:150px;
+      padding:.45rem;
+      border:1px solid #e5e7eb;
+      border-radius:8px
+    }
+
+    /* ✅ RIGHT-ALIGN BALANCE COLUMN (5th COL) SO NUMBERS LINE UP */
+    .table-wrap table th:nth-child(5),
+    .table-wrap table td:nth-child(5){
+      text-align:right;
+      font-variant-numeric: tabular-nums; /* nicer lining if browser supports it */
+    }
   </style>
 </head>
 
@@ -52,7 +75,9 @@
       <li><a href="#balance">Balance Sheet</a></li>
       <li><a href="#retained">Statement of Retained Earnings</a></li>
     </ul>
-    <div class="sidebar-footer"><button class="btn" onclick="localStorage.clear();location.href='HornetHiveLogin.html'">Logout</button></div>
+    <div class="sidebar-footer">
+      <button class="btn" onclick="localStorage.clear();location.href='HornetHiveLogin.html'">Logout</button>
+    </div>
   </aside>
 
   <main class="main">
@@ -98,8 +123,14 @@
       <table>
         <thead>
           <tr>
-            <th>Account Number</th><th>Name</th><th>Type</th><th>Term</th>
-            <th>Balance</th><th>Created By</th><th>Date Created</th><th>Comments</th>
+            <th>Account Number</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Term</th>
+            <th>Balance</th>
+            <th>Created By</th>
+            <th>Date Created</th>
+            <th>Comments</th>
           </tr>
         </thead>
         <tbody id="accountTableBody"><tr><td colspan="8"></td></tr></tbody>
@@ -119,6 +150,7 @@
   const money = (n) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
       .format(Number(n ?? 0));
+
   async function loadAccounts(opts = {}) {
     const {
       searchTerm = "",

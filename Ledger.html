@@ -17,7 +17,12 @@
     th {background:#f8fafc; font-weight:600}
     .btn-back {margin-top:1rem; padding:.45rem .7rem; background:#0f172a; color:#fff; border-radius:8px}
     .ref a {text-decoration:underline; color:#2563eb}
-    .money {text-align:right; white-space:nowrap}
+    /* ✅ money cells right-aligned with tabular numbers */
+    .money {
+      text-align:right;
+      white-space:nowrap;
+      font-variant-numeric: tabular-nums;
+    }
     .muted {color:#6b7280}
   </style>
 </head>
@@ -137,7 +142,7 @@
       .order('account_number');
 
     if (error) return console.error(error);
-    _accountsIndex = data || [];
+    _accountsIndex = (data || []);
 
     const dl = document.getElementById('accountsList');
     dl.innerHTML = '';
@@ -265,10 +270,10 @@
     await loadLedger();
   });
 
-    // Logout functionality
+  // Logout functionality
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    try { 
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    try {
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
     } catch(e){}
     localStorage.removeItem('username');
     location.href = 'HornetHiveLogin.html';

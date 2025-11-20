@@ -8,23 +8,111 @@
   <link rel="stylesheet" href="chart_override.css">
   <link rel="stylesheet" href="ledger_popup.css">
   <style>
-    .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000}
+    .popup-overlay{
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.5);
+      align-items:center;
+      justify-content:center;
+      z-index:1000
+    }
     .popup-overlay.show{display:flex}
-    .popup-card{background:#fff;border-radius:12px;max-width:620px;width:95%;padding:1rem 1.25rem 1.25rem}
-    .form-vertical{display:flex;flex-direction:column;gap:.75rem}
-    .form-vertical .field{display:flex;flex-direction:column;gap:.35rem}
-    .form-vertical input,.form-vertical select,.form-vertical textarea{padding:.55rem .6rem;border:1px solid #e5e7eb;border-radius:8px;width:100%;background:#fff;min-height:40px}
-    .form-vertical textarea{min-height:80px;resize:vertical}
-    .form-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.35rem}
+    .popup-card{
+      background:#fff;
+      border-radius:12px;
+      max-width:620px;
+      width:95%;
+      padding:1rem 1.25rem 1.25rem
+    }
+    .form-vertical{
+      display:flex;
+      flex-direction:column;
+      gap:.75rem
+    }
+    .form-vertical .field{
+      display:flex;
+      flex-direction:column;
+      gap:.35rem
+    }
+    .form-vertical input,
+    .form-vertical select,
+    .form-vertical textarea{
+      padding:.55rem .6rem;
+      border:1px solid #e5e7eb;
+      border-radius:8px;
+      width:100%;
+      background:#fff;
+      min-height:40px
+    }
+    .form-vertical textarea{
+      min-height:80px;
+      resize:vertical
+    }
+    .form-actions{
+      display:flex;
+      gap:.5rem;
+      justify-content:flex-end;
+      margin-top:.35rem
+    }
     .button,.btn,button{cursor:pointer}
-    .ledger-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:999}
-    .ledger-popup .ledger-card{background:#fff;border-radius:12px;max-width:900px;width:95%;padding:1rem}
+    .ledger-popup{
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.5);
+      align-items:center;
+      justify-content:center;
+      z-index:999
+    }
+    .ledger-popup .ledger-card{
+      background:#fff;
+      border-radius:12px;
+      max-width:900px;
+      width:95%;
+      padding:1rem
+    }
     .ledger-close{float:right}
     a.link{color:#0a58ca;text-decoration:underline}
-    .filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:end}
-    .filters .field{display:flex;flex-direction:column;gap:.25rem}
-    .filters input,.filters select{min-width:150px;padding:.45rem;border:1px solid #e5e7eb;border-radius:8px}
-  </style>
+    .filters{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.5rem;
+      align-items:end
+    }
+    .filters .field{
+      display:flex;
+      flex-direction:column;
+      gap:.25rem
+    }
+    .filters input,
+    .filters select{
+      min-width:150px;
+      padding:.45rem;
+      border:1px solid #e5e7eb;
+      border-radius:8px
+    }
+  
+    /* ✅ RIGHT-ALIGN MONEY COLUMNS SO DIGITS LINE UP */
+  
+    /* Chart of Accounts table – 5th column is Balance */
+    .table-wrap table th:nth-child(5),
+    .table-wrap table td:nth-child(5){
+      text-align:right;
+      font-variant-numeric: tabular-nums; /* nicer lining-up if browser supports it */
+    }
+  
+    /* Ledger popup: Debit, Credit, Account Balance are columns 3,4,5 */
+    .ledger-table th:nth-child(3),
+    .ledger-table td:nth-child(3),
+    .ledger-table th:nth-child(4),
+    .ledger-table td:nth-child(4),
+    .ledger-table th:nth-child(5),
+    .ledger-table td:nth-child(5){
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>  
 </head>
 
 <body class="has-sidebar">
