@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Hornet Hive Accounting - Users</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="users.css">
+</head>
+
+<body class="has-sidebar">
+    <header class="topbar">
+        <div class="datetime" id="dateTime"></div>
+        <div class="user">
+            <img id="userAvatar" src="profile.png" alt="User">
+            <span id="userName"></span>
+        </div>
+    </header>
+
+    <script>
+        const name = localStorage.getItem('first_name') || 'User';
+        const el = document.getElementById('userName');
+        if (el) el.textContent = name;
+
+        function updateClock() {
+            const now = new Date();
+            const options = {
+                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            };
+            document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+        }
+        updateClock(); setInterval(updateClock, 1000);
+    </script>
+
+    <div class="app">
+        <!-- ADMIN SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+            </div>
+            <ul class="nav">
+                <li><a href="AdminDashboard.html">Dashboard</a></li>
+                <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+                <li><a href="Accounts.html">Accounts</a></li>
+                <li><a href="Users.html" aria-current="page">Users</a></li>
+                <li><a href="EventLogs.html">Event Logs</a></li>
+            </ul>
+            <div class="sidebar-footer"><button class="btn">Logout</button></div>
+        </aside>
+
+        <main class="main">
+            <form id="accountForm" class="card">
+                <label>Account Name: <input type="text" name="accountName" required /></label>
+                <label> Account Number:<input type="text" name="accountNumber" pattern="^[0-9]{2,}$" required title="Enter at least two digits, numbers only" /></label>
+                <label>Description: <textarea name="description" required></textarea></label>
+                <label> Normal Side:
+                    <select name="normalSide" required>
+                        <option value="debit">Debit</option>
+                        <option value="credit">Credit</option>
+                    </select>
+                </label>
+                <label>Category: <input type="text" name="category" required /></label>
+                <label>Subcategory: <input type="text" name="subcategory" required /></label>
+                <label>Initial Balance: <input type="number" step="0.01" name="initialBalance" required /></label>
+                <label>Debit: <input type="number" step="0.01" name="debit" required /></label>
+                <label>Credit: <input type="number" step="0.01" name="credit" required /></label>
+                <label>Balance: <input type="number" step="0.01" name="balance" required /></label>
+                <label>Date Added: <input type="datetime-local" name="dateAdded" required /></label>
+                <label>User ID: <input type="text" name="userId" required /></label>
+                <label>Order: <input type="text" name="order" required /></label>
+                <label>
+                    Statement:
+                    <select name="statement" required>
+                        <option value="IS">Income Statement</option>
+                        <option value="BS">Balance Sheet</option>
+                        <option value="RE">Retained Earnings</option>
+                    </select>
+                </label>
+                <label>Comment: <textarea name="comment"></textarea></label>
+
+                <div class="form-actions">
+                    <button type="submit">Save Account</button>
+                </div>
+            </form>
+        </main>
+
+        <script type="module">
+            const { createClient } = supabase;
+            const supabaseClient = createClient(
+                "https://rsthdogcmqwcdbqppsrm.supabase.co",
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            );
+
+            const form = document.getElementById("accountForm");
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const accountData = Object.fromEntries(formData.entries());
+
+                // Check for duplicate accountName or accountNumber
+                const { data: existing, error: checkError } = await supabaseClient
+                    .from("accounts")
+                    .select("accountName, accountNumber")
+                    .or(`accountName.eq.${accountData.accountName},accountNumber.eq.${accountData.accountNumber}`);
+
+                if (checkError) {
+                    alert("Error checking for duplicates: " + checkError.message);
+                    return;
+                }
+
+                if (existing.length > 0) {
+                    alert("An account with this name or number already exists.");
+                    return;
+                }
+
+                // Insert new account
+                const { error: insertError } = await supabaseClient
+                    .from("accounts")
+                    .insert([accountData]);
+
+                if (insertError) {
+                    alert("Error saving account: " + insertError.message);
+                } else {
+                    alert("Account saved successfully!");
+                    form.reset();
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

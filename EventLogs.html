@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Event Logs</title>
+  <link rel="stylesheet" href="main.css"/>
+
+  <style>
+    /* ---- Minimal, professional event log styling (no yellow tints) ---- */
+
+    :root{
+      --line:#e5e7eb;      /* borders */
+      --muted:#6b7280;     /* labels */
+      --bg:#ffffff;        /* row background */
+      --bg-alt:#fafafa;    /* hover / zebra */
+      --pill:#111827;      /* pill text */
+      --pill-bg:#f3f4f6;   /* pill bg */
+      --add:#16a34a;       /* add color */
+      --upd:#334155;       /* update color (slate) */
+      --deact:#ef4444;     /* deactivate color */
+      --brand:#15803d;     /* site green */
+      --changed-outline:#93c5fd; /* subtle blue outline */
+      --changed-bg:#eff6ff;      /* subtle blue bg */
+    }
+
+    .toolbar{
+      display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem
+    }
+    .toolbar input[type="date"], .toolbar input[type="text"], .toolbar select, .toolbar button{
+      padding:.45rem .6rem; border:1px solid var(--line); border-radius:8px; background:#fff;
+      color:#111827; /* ensure visible text */
+    }
+    .toolbar button{ cursor:pointer }
+    .toolbar button#apply{ border-color:var(--brand) }
+    .toolbar button#clear{ border-color:#cbd5e1 }
+
+    /* Column headers */
+    .logs-head{
+      display:grid;
+      grid-template-columns: 260px 1fr 1fr;
+      gap:1rem;
+      padding:.5rem .25rem .6rem;
+      border-bottom:1px solid var(--line);
+      color:var(--muted);
+      font-size:.9rem;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+    }
+
+    #logs{ display:block; }
+
+    /* Each log row */
+    .log-card{
+      display:grid;
+      grid-template-columns: 260px 1fr 1fr;
+      gap:1rem;
+      padding:1rem .25rem;
+      border-bottom:1px solid var(--line);
+      background:var(--bg);
+      transition:background-color .15s ease;
+    }
+    .log-card:hover{ background:var(--bg-alt); }
+
+    .log-meta{ display:flex; flex-direction:column; gap:.35rem; font-size:.95rem; }
+    .log-meta .pill{
+      display:inline-block;
+      padding:.2rem .5rem;
+      border-radius:999px;
+      background:var(--pill-bg);
+      color:var(--pill);
+      font-weight:600;
+      font-size:.8rem;
+      width:max-content;
+    }
+    .log-meta .pill.add{ color:var(--add); background:#ecfdf5 }
+    .log-meta .pill.update{ color:var(--upd); background:#f1f5f9 }
+    .log-meta .pill.deactivate{ color:var(--deact); background:#fef2f2 }
+    .meta-line{ color:var(--muted); font-size:.9rem }
+
+    .snapshot{ background:transparent; border:0; padding:0; }
+    .snapshot h4{ display:none }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap:.3rem .75rem;
+      font-size:.95rem;
+    }
+    .kv .k{ color:var(--muted); }
+    .kv .v{ font-weight:600; }
+    .kv .v.changed{
+      background:var(--changed-bg);
+      outline:1px dashed var(--changed-outline);
+      border-radius:6px; padding:.05rem .3rem;
+    }
+    .empty{ color:#9ca3af; font-style:italic }
+
+    .no-results{ text-align:center; color:#666; padding:2rem 1rem }
+
+    .paginate{ display:flex; justify-content:center; gap:.5rem; margin-top:1rem }
+    .paginate button{
+      padding:.45rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer;
+      color:#111827;
+    }
+
+    @media (max-width: 900px){
+      .logs-head{ display:none; }
+      .log-card{ grid-template-columns: 1fr; gap:.5rem; }
+      .kv{ grid-template-columns: 130px 1fr; }
+    }
+  </style>
+</head>
+
+<body class="has-sidebar">
+<header class="topbar">
+  <div class="datetime" id="dateTime"></div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
+</header>
+
+<script>
+  const name = localStorage.getItem('username') || 'Admin';
+  const el = document.getElementById('userName');
+  if (el) el.textContent = name;
+  function updateClock(){
+    const now = new Date();
+    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
+                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
+    </div>
+    <ul class="nav">
+      <li><a href="AdminDashRevised.html">Dashboard</a></li>
+      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
+      <li><a href="Accounts.html">Accounts</a></li>
+      <li><a href="Users.html">Users</a></li>
+      <li><a href="EventLogs.html" aria-current="page">Event Logs</a></li>
+    </ul>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <h1>Event Logs</h1>
+      <div class="toolbar">
+        <input id="q" type="text" placeholder="Search (entity, name, user)…"/>
+        <select id="actionFilter">
+          <option value="">All actions</option>
+          <!-- filled dynamically -->
+        </select>
+        <label>From <input id="fromDate" type="date"/></label>
+        <label>To <input id="toDate" type="date"/></label>
+        <button id="apply">Apply</button>
+        <button id="clear">Clear</button>
+        <button id="viewExpired">View Expired Passwords</button>
+      </div>
+    </div>
+
+    <div class="logs-head">
+      <div>Action / Entity / User / Time</div>
+      <div>Before</div>
+      <div>After</div>
+    </div>
+
+    <div id="logs">
+      <div class="no-results">Loading…</div>
+    </div>
+
+    <div class="paginate">
+      <button id="prevPage" disabled>Prev</button>
+      <span id="pageInfo" style="min-width:8ch; text-align:center;"></span>
+      <button id="nextPage" disabled>Next</button>
+    </div>
+
+    <!-- Popup overlay for expired passwords -->
+    <div id="expiredPopup" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); 
+        backdrop-filter:blur(2px); align-items:center; justify-content:center; z-index:9999;">
+      <div style="background:#fff; padding:1.5rem; border-radius:12px; width:600px; max-height:80vh; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+        <h2 style="margin-top:0;">Expired Passwords</h2>
+        <div id="expiredList" style="margin-top:1rem; font-size:.95rem;"></div>
+          <button
+            id="closeExpired"
+            style="margin-top:1.5rem; padding:.4rem .8rem; border:1px solid #ccc; border-radius:8px;
+                  background:#fff; cursor:pointer; color:#000; font-weight:600;">
+          Close
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script type="module" src="eventLogs.js"></script>
+
+<script>
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+  });
+</script>
+</body>
+</html>

@@ -42,7 +42,8 @@
   border-collapse: collapse;
 }
 
-.ledger-table th, .ledger-table td {
+.ledger-table th,
+.ledger-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
@@ -51,6 +52,18 @@
 .ledger-table th {
   background: #f3f3f3;
   font-weight: 600;
+}
+
+/* ✅ Right-align money columns: Debit, Credit, Account Balance */
+.ledger-table th:nth-child(3),
+.ledger-table th:nth-child(4),
+.ledger-table th:nth-child(5),
+.ledger-table td:nth-child(3),
+.ledger-table td:nth-child(4),
+.ledger-table td:nth-child(5) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .ledger-link {
