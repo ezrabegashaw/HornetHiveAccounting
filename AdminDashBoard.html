@@ -56,13 +56,13 @@
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
     <ul class="nav">
-      <li><a href="AdminDashRevised.html" aria-current="page">Dashboard</a></li>
+      <li><a href="AdminDashBoard.html" aria-current="page">Dashboard</a></li>
       <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
       <li><a href="Accounts.html">Accounts</a></li>
       <li><a href="Users.html">Users</a></li>
       <li><a href="EventLogs.html">Event Logs</a></li>
     </ul>
-    <div class="sidebar-footer"><button class="btn">Logout</button></div>
+    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
   </aside>
 
   <main class="main">
@@ -197,6 +197,16 @@
   });
 </script>
 
+<script>
+    // Logout functionality
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try { 
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    } catch(e){}
+    localStorage.removeItem('username');
+    location.href = 'HornetHiveLogin.html';
+   });
+</script>
 
 <script src="message.js"></script>
 

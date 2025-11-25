@@ -164,7 +164,11 @@
   max-width: 95%;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
   padding: 16px 18px 18px;
-  position: relative;
+  position: fixed; /* use fixed positioning to center reliably */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001; /* sit above the overlay */
 }
 
 .modal-close {
