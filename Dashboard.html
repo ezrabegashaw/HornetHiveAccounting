@@ -14,7 +14,6 @@
   <div class="datetime" id="dateTime"></div>
 
   <div class="topbar-right">
-    <button class="btn" id="helpBtn" title="View help topics">Help</button>
 
     <div class="notification-wrapper">
       <button id="notifBell" class="notif-bell" title="Messages">
@@ -130,8 +129,6 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const helpBtn = document.getElementById('helpBtn');
-    if (helpBtn) helpBtn.addEventListener('click', () => window.open('help.html', '_blank'));
 
     const bell = document.getElementById('notifBell');
     const dropdown = document.getElementById('notifDropdown');
@@ -162,5 +159,126 @@ showNavIfAccountant();
 </script>
 
 <script src="message.js"></script>
+
+<style>
+  #helpBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #0a58ca;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 50px;
+    cursor: pointer;
+    border: none;
+    font-size: 15px;
+    z-index: 1100;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
+
+  #helpOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+  }
+  #helpOverlay.show { display: flex; }
+
+  .help-card {
+    background: #fff;
+    width: 90%;
+    max-width: 750px;
+    border-radius: 12px;
+    padding: 1.4rem 1.75rem;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .help-card h2 { margin-top: 0; }
+  .help-topic { margin-bottom: 1.2rem; }
+  .help-topic h3 { margin-bottom: 0.4rem; color: #0a58ca; }
+</style>
+
+<button id="helpBtn">Help</button>
+
+<div id="helpOverlay">
+  <div class="help-card">
+    <button id="closeHelp" style="float:right; cursor:pointer;">Close ✕</button>
+    <h2>Help & Documentation</h2>
+
+    <div class="help-topic">
+      <h3>Financial Ratios</h3>
+      <p>Used to evaluate performance and financial health. Includes liquidity ratios (current ratio), profitability ratios (net profit margin), and solvency ratios (debt-to-equity).</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Accounts</h3>
+      <p>Individual record categories that track increases and decreases in assets, liabilities, equity, revenue, and expenses.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Chart of Accounts</h3>
+      <p>A structured list of all accounts in the system. Organized by type and number. Used as the foundation for all financial recordkeeping.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Balance Sheet</h3>
+      <p>A financial statement showing assets, liabilities, and equity at a specific point in time. Follows: Assets = Liabilities + Equity.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Event Logs</h3>
+      <p>Tracks actions taken by users such as logins, account changes, journal entries, and administrative updates for auditability.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Income Statement</h3>
+      <p>Shows revenues and expenses over a period of time, resulting in net income or net loss.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Journals</h3>
+      <p>The first place transactions are recorded. Each journal entry includes debits and credits to the relevant accounts.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Ledgers</h3>
+      <p>Contains all transactions for a single account. Shows running balances and is used to prepare financial statements.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Retained Earnings</h3>
+      <p>Cumulative net income kept in the business after dividends are paid. Updated at the end of each accounting period.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Trial Balance</h3>
+      <p>A report listing all ending account balances to ensure total debits equal total credits. Helps identify recording errors.</p>
+    </div>
+
+    <div class="help-topic">
+      <h3>Users</h3>
+      <p>Administrators and staff who have access to the system. Permissions determine who may view, edit, or approve entries.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const helpBtn = document.getElementById('helpBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const closeHelp = document.getElementById('closeHelp');
+
+  helpBtn.addEventListener('click', () => helpOverlay.classList.add('show'));
+  closeHelp.addEventListener('click', () => helpOverlay.classList.remove('show'));
+
+  helpOverlay.addEventListener('click', (e) => {
+    if (e.target === helpOverlay) helpOverlay.classList.remove('show');
+  });
+</script>
+
 </body>
 </html>
