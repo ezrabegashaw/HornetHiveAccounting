@@ -99,7 +99,7 @@
         </select>
         <label>Active</label>
         <input id="editActive" type="checkbox">
-        <!-- hidden native submit kept to ensure form.requestSubmit() triggers form's submit event -->
+
         <input id="hiddenEditSubmit" type="submit" value="Submit" style="display:none">
         <label>Suspend User:</label>
         <div class="suspend-dates">
@@ -140,7 +140,7 @@
     <div class="popup" id="newPopup">
       <h3>Create New Users</h3>
       <hr>
-      <form id="newUserForm" onsubmit="return createNewUser(event)">
+      <form id="newUserForm">
         <label>Name:</label>
         <input name="firstName" type="text" placeholder="First Name" required>
         <input name="lastName" type="text" placeholder='Last Name' required>
@@ -158,9 +158,10 @@
         </select>
         <lable>Password:</lable>
         <input name="enterPassword" type="password" placeholder='Enter Password' required>
-        <input name="confirmPassword" tpye="password" placeholder='Confirm Password' required>
+        <input name="confirmPassword" tpye="password" placeholder='Confirm Password' required> 
       </form>
 
+      <label>Username:</label>
       <p id="username">This text is where it gonna show your username</p>
 
       <div class="popup-buttons">
@@ -173,8 +174,6 @@
   </main>
 
 </div>
-
-<script src="'users.js">
   
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -448,16 +447,65 @@
 
     }
 
-  //Handles submitting new user request
+  
+  //New User Request
+  const createNewUserForm = document.getElementById("newUserForm");
+  if (createNewUserForm) {
+    createNewUserForm.addEventListener('submit', function (event) { createNewUser(event); });
+  }
+
   async function createNewUser(event) {
-    event.preventDefault();
-    const first = event.target.firstName.value;
-    const last = event.target.lastName.value;
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    const first = event.target.firstName.value.trim();
+    const last = event.target.lastName.value.trim();
+    const email = event.target.addEmail.value.trim();
     const dob = event.target.dob.value; // yyyy-mm-dd
+    const password = event.target.enterPassword.value.trim();
+    const role = event.target.role.value;
+    const address = event.target.address.value.trim();
+
     const usernameEl = document.getElementById('username');
-    // ensure username is generated before submitting
+    // Email is generated based on first, last, and dob
     const username = usernameEl ? usernameEl.textContent.trim() : '';
-    console.log('Submitting new user', { first, last, dob, username });
+    
+    const data = {
+      first_name: first,
+      last_name: last,
+      email: email,
+      username: username, // server still ensures uniqueness
+      address: address,
+      dob: dob,
+      role: role,
+      password: password
+    };
+
+    const confirmPassword = event.target.confirmPassword.value.trim();
+
+    if(data.password != confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+
+    const passwordRegex = /^(?=[A-Za-z])(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(data.password)) {
+      alert("Password must start with a letter, include a number & special character, and be 8+ characters.");
+      return;
+    }
+
+    try {
+      const { error } = await signupUser(data); // from auth.js
+      if(error) {
+        alert("Signup failed: " + (error.message || JSON.stringify(error)));
+        return;
+      }
+    } catch (err) {
+        console.error("Unexpected signup error:", err);
+        alert("Unexpected error occurred. See console for details.");
+    }
+
+    console.log('Submitting new user', {data});
+
+
   }
 
   function liveUsername() {
@@ -475,7 +523,7 @@
       const dob = (dobEl && dobEl.value) ? dobEl.value : '';
 
       if (!first || !last || !dob) {
-        if (out) out.textContent = 'This text is where it gonna show your username';
+        if (out) out.textContent = 'First, Last, and DOB are required for username!';
         return;
       }
 
