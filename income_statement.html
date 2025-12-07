@@ -8,9 +8,10 @@
 
   <style>
     body.has-sidebar {
-      font-family: Arial, sans-serif;
-      color: #111827;
-      background: #f9fafb;
+      /* Use global site variables from main.css so typography matches other pages */
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
     }
     .main {
       padding: 2rem;
@@ -61,10 +62,7 @@
     .amt.double-underline {
       border-bottom: 3px double #111827;
     }
-    .brand {
-      font-weight: bold;
-      font-size: 1.25rem;
-    }
+    /* Use global .brand styles from main.css */
   </style>
 </head>
 
@@ -78,7 +76,7 @@
 </header>
 
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock(){
@@ -93,18 +91,18 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo" style="width:28px;vertical-align:middle;margin-right:6px;">HHA
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
     <ul class="nav">
      <li><a href="Dashboard.html" >Dashboard</a></li>
       <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html">Accounts</a></li>
       <li><a href="journal.html">Journalize</a></li>
       <li><a href="trial_balance.html">Trial Balance</a></li>
       <li><a href="income_statement.html" aria-current="page">Income Statement</a></li>
       <li><a href="balance_sheet.html">Balance Sheet</a></li>
       <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
-      <li><a href="Messages.html">Messages</a></li>
-      <li><a href="Reports.html">Reports</a></li>
+      
     </ul>
     <div class="sidebar-footer">
       <button class="btn" id="logoutBtn">Logout</button>
@@ -259,6 +257,7 @@ document.addEventListener("DOMContentLoaded", buildIncomeStatement);
 document.getElementById('logoutBtn')?.addEventListener('click', async () => {
   try { if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); } catch(e){}
   localStorage.removeItem('username');
+  localStorage.removeItem('first_name');
   location.href = 'HornetHiveLogin.html';
 });
 </script>

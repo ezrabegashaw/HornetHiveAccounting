@@ -1,5 +1,4 @@
-// ===================== auth.js (header) =====================
-// Import createClient from global supabase object (via CDN)
+// auth.js
 const { createClient } = supabase;
 
 // Supabase project info
@@ -7,11 +6,6 @@ const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-/*
-   IMPORTANT:
-   Create ONE global supabaseClient for the whole app.
-   If it already exists (from another page), reuse it.
-*/
 if (!window.supabaseClient) {
   window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
@@ -19,15 +13,8 @@ if (!window.supabaseClient) {
 const supabaseClient = window.supabaseClient;
 window.USE_SUPABASE = true;
 
-/* ----------------------------------------------------------------
-   API base (HARD-SET for local dev to avoid hostname mismatches)
-------------------------------------------------------------------*/
 const API_BASE = `http://127.0.0.1:3333/api`;
 
-
-/* ----------------------------------------------------------------
-   USERNAME HELPERS
-------------------------------------------------------------------*/
 function baseUsername(first_name, last_name, when = new Date()) {
   const mm = String(when.getMonth() + 1).padStart(2, "0");
   const yy = String(when.getFullYear()).slice(-2);
@@ -213,3 +200,17 @@ async function isActive(email) {
   if (data?.email === email) return data.active;
   return { error: "No role found" };
 }
+
+// Show Accounts link for Accountant or Manager users (if the page includes the element)
+function showAccountsLinkForAcctMgr() {
+  try {
+    const el = document.getElementById('accountsForAcctMgr');
+    if (!el) return;
+    const role = (localStorage.getItem('role') || '').toLowerCase();
+    if (role === 'accountant' || role === 'manager') el.style.display = 'block';
+    else el.style.display = 'none';
+  } catch (e) {
+    // ignore
+  }
+}
+document.addEventListener('DOMContentLoaded', showAccountsLinkForAcctMgr);

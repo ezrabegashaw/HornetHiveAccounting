@@ -106,7 +106,7 @@
 </header>
 
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
 
@@ -131,13 +131,13 @@
     <ul class="nav">
      <li><a href="Dashboard.html" >Dashboard</a></li>
       <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html">Accounts</a></li>
       <li><a href="journal.html">Journalize</a></li>
       <li><a href="trial_balance.html">Trial Balance</a></li>
       <li><a href="income_statement.html">Income Statement</a></li>
       <li><a href="balance_sheet.html">Balance Sheet</a></li>
       <li><a href="retained_earnings.html" aria-current="page">Statement of Retained Earnings</a></li>
-      <li><a href="Messages.html">Messages</a></li>
-      <li><a href="Reports.html">Reports</a></li>
+      
     </ul>
     <div class="sidebar-footer">
       <button class="btn" id="logoutBtn">Logout</button>
@@ -187,6 +187,7 @@
       if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
     } catch(e){}
     localStorage.removeItem('username');
+    localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
   });
 </script>

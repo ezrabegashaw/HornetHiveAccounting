@@ -27,11 +27,10 @@
       border-radius:8px
     }
 
-    /* ✅ RIGHT-ALIGN BALANCE COLUMN (5th COL) SO NUMBERS LINE UP */
     .table-wrap table th:nth-child(5),
     .table-wrap table td:nth-child(5){
       text-align:right;
-      font-variant-numeric: tabular-nums; /* nicer lining if browser supports it */
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -47,7 +46,7 @@
   </div>
 </header>
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock(){
@@ -66,15 +65,15 @@
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
     <ul class="nav">
-     <li><a href="Dashboard.html" >Dashboard</a></li>
-      <li><a href="ChartOfAccounts.html"aria-current="page">Chart of Accounts</a></li>
+    <li><a href="Dashboard.html" >Dashboard</a></li>
+     <li><a href="ChartOfAccounts.html"aria-current="page">Chart of Accounts</a></li>
+     <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html">Accounts</a></li>
       <li><a href="journal.html">Journalize</a></li>
       <li><a href="trial_balance.html">Trial Balance</a></li>
       <li><a href="income_statement.html">Income Statement</a></li>
       <li><a href="balance_sheet.html">Balance Sheet</a></li>
       <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
-      <li><a href="Messages.html">Messages</a></li>
-      <li><a href="Reports.html">Reports</a></li>
+      
     </ul>
     <div class="sidebar-footer">
       <button class="btn" onclick="localStorage.clear();location.href='HornetHiveLogin.html'">Logout</button>
@@ -241,7 +240,7 @@
     });
     $('searchInput').addEventListener('keyup', e => { if (e.key === 'Enter') run(); });
 
-    // (Optional) Calendar include
+    // Calendar include
     fetch('Calendar.html').then(r=>r.text()).then(html=>{
       const container = document.getElementById('calendarContainer');
       container.innerHTML = html;

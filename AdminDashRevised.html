@@ -17,7 +17,7 @@
   </div>
 </header>
 <script>
-  const name = localStorage.getItem('username') || 'Admin';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'Admin';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock(){
@@ -60,7 +60,7 @@
 
 <script src="auth.js"></script>
 <script>
-  // If your auth.js exposes initRBAC, keep using it:
+  // If auth.js exposes initRBAC, keep using it:
   if (typeof initRBAC === 'function') initRBAC();
 </script>
 
