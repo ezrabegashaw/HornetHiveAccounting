@@ -8,9 +8,10 @@
 
   <style>
     body.has-sidebar {
-      font-family: Arial, sans-serif;
-      color: #111827;
-      background: #f9fafb;
+      /* Use global site variables from main.css so typography matches other pages */
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
     }
     .main {
       padding: 2rem;
@@ -61,10 +62,7 @@
     .amt.double-underline {
       border-bottom: 3px double #111827;
     }
-    .brand {
-      font-weight: bold;
-      font-size: 1.25rem;
-    }
+    /* Use global .brand styles from main.css */
   </style>
 </head>
 
@@ -93,7 +91,7 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo" style="width:28px;vertical-align:middle;margin-right:6px;">HHA
+      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
     <ul class="nav">
      <li><a href="Dashboard.html" >Dashboard</a></li>
