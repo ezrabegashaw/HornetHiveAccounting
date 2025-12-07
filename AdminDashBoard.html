@@ -38,7 +38,7 @@
 </header>
 
 <script>
-  const name = localStorage.getItem('username') || 'Admin';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'Admin';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock() {
@@ -204,6 +204,7 @@
       if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
     } catch(e){}
     localStorage.removeItem('username');
+    localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
    });
 </script>

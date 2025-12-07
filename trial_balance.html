@@ -118,7 +118,7 @@
 </header>
 
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
 
@@ -199,6 +199,7 @@
       }
     } catch(e){}
     localStorage.removeItem('username');
+    localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
   });
 </script>

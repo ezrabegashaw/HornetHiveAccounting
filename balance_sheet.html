@@ -99,7 +99,7 @@
   </div>
 </header>
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const userSpan = document.getElementById('userName');
   if (userSpan) userSpan.textContent = name;
 
@@ -168,6 +168,7 @@
       if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
     } catch(e){}
     localStorage.removeItem('username');
+    localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
   });
 

@@ -27,11 +27,10 @@
       border-radius:8px
     }
 
-    /* ✅ RIGHT-ALIGN BALANCE COLUMN (5th COL) SO NUMBERS LINE UP */
     .table-wrap table th:nth-child(5),
     .table-wrap table td:nth-child(5){
       text-align:right;
-      font-variant-numeric: tabular-nums; /* nicer lining if browser supports it */
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -47,7 +46,7 @@
   </div>
 </header>
 <script>
-  const name = localStorage.getItem('username') || 'User';
+  const name = localStorage.getItem('first_name') || localStorage.getItem('username') || 'User';
   const el = document.getElementById('userName');
   if (el) el.textContent = name;
   function updateClock(){
@@ -241,7 +240,7 @@
     });
     $('searchInput').addEventListener('keyup', e => { if (e.key === 'Enter') run(); });
 
-    // (Optional) Calendar include
+    // Calendar include
     fetch('Calendar.html').then(r=>r.text()).then(html=>{
       const container = document.getElementById('calendarContainer');
       container.innerHTML = html;
