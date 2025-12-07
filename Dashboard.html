@@ -56,6 +56,7 @@
     <ul class="nav">
       <li><a href="Dashboard.html" aria-current="page">Dashboard</a></li>
       <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
+      <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html">Accounts</a></li>
       <li><a href="journal.html">Journalize</a></li>
       <li><a href="trial_balance.html">Trial Balance</a></li>
       <li><a href="income_statement.html">Income Statement</a></li>
@@ -98,6 +99,19 @@
   if (typeof initRBAC === 'function') initRBAC();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  // Ensure Accounts link shows for Accountant/Manager even if script load order varies
+  (function(){
+    try {
+      const el = document.getElementById('accountsForAcctMgr');
+      if (!el) return;
+      const role = (localStorage.getItem('role') || '').toLowerCase();
+      if (role === 'accountant' || role === 'manager') el.style.display = 'block';
+      else el.style.display = 'none';
+    } catch(e){}
+  })();
+</script>
 
 <script>
   document.addEventListener("DOMContentLoaded", async () => {

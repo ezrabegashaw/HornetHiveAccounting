@@ -200,3 +200,17 @@ async function isActive(email) {
   if (data?.email === email) return data.active;
   return { error: "No role found" };
 }
+
+// Show Accounts link for Accountant or Manager users (if the page includes the element)
+function showAccountsLinkForAcctMgr() {
+  try {
+    const el = document.getElementById('accountsForAcctMgr');
+    if (!el) return;
+    const role = (localStorage.getItem('role') || '').toLowerCase();
+    if (role === 'accountant' || role === 'manager') el.style.display = 'block';
+    else el.style.display = 'none';
+  } catch (e) {
+    // ignore
+  }
+}
+document.addEventListener('DOMContentLoaded', showAccountsLinkForAcctMgr);
