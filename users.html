@@ -38,22 +38,8 @@
 
 <div class="app">
 
-  <!-- ADMIN SIDEBAR -->
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-    </div>
-    <ul class="nav">
-      <li><a href="AdminDashBoard.html">Dashboard</a></li>
-      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
-      <li><a href="Users.html" aria-current="page">Users</a></li>
-      <li><a href="EventLogs.html">Event Logs</a></li>
-    </ul>
-    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
-  </aside>
-
-
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
   
   <main class="main">
     <div class="header">
@@ -725,6 +711,5 @@
   });
 </script>
 
-<script src="sidebarControl.js"></script>
 </body>
 </html>
