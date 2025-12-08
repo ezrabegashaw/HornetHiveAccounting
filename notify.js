@@ -10,7 +10,7 @@
     function ready(fn){ document.readyState !== 'loading' ? fn() : document.addEventListener('DOMContentLoaded', fn); }
   
     const BELL_SRC = './icons8-bell-24.png';
-    const BRAND_GREEN = '#15803d'; // your KSU-style green
+    const BRAND_GREEN = '#15803d';
   
     ready(async function () {
       const db = window.supabaseClient;
@@ -18,8 +18,8 @@
         console.warn('[notify.js] supabaseClient not found. Load notify.js AFTER auth.js.');
         return;
       }
-  
-      // --- Identify role ---
+
+      // Identify role 
       const username = localStorage.getItem('username') || 'User';
       let role = 'accountant';
       try {
@@ -31,7 +31,7 @@
   
       if (role !== 'manager') return;
   
-      // --- Inject styles ---
+      // Inject styles
       injectStyles(`
         .notif-wrap{position:relative}
         header.topbar{position:relative;display:flex;justify-content:space-between;align-items:center}
@@ -49,7 +49,7 @@
         .notif-dot{width:8px;height:8px;margin-top:.35rem;border-radius:9999px;background:#22c55e;flex-shrink:0}
       `);
   
-      // --- Build bell icon ---
+      // Build bell icon 
       const topbar = document.querySelector('header.topbar');
       if (!topbar) return console.warn('[notify.js] No header.topbar found.');
       const userBlock = topbar.querySelector('.user');
@@ -81,10 +81,10 @@
         if (!wrap.contains(e.target)) dd.style.display = 'none';
       });
   
-      // --- Load initial notifications ---
+      // Load initial notifications 
       await loadPending();
   
-      // --- Real-time updates ---
+      // Real-time updates 
       try {
         const channel = db.channel('journal_notify_png');
         channel
@@ -100,7 +100,7 @@
         console.warn('[notify.js] Realtime subscribe failed:', e);
       }
   
-      // --- Functions ---
+      // Functions 
       async function loadPending() {
         try {
           const { data, error } = await db

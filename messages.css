@@ -145,11 +145,11 @@
   text-overflow: ellipsis;
 }
 
-/* ===== Message Modal ===== */
+/* Message Modal */
 .message-modal {
   position: fixed;
   inset: 0;
-  display: none; /* toggled via JS */
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(15, 23, 42, 0.35);
@@ -164,11 +164,11 @@
   max-width: 95%;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
   padding: 16px 18px 18px;
-  position: fixed; /* use fixed positioning to center reliably */
+  position: fixed; 
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10001; /* sit above the overlay */
+  z-index: 10001;
 }
 
 .modal-close {
@@ -244,7 +244,7 @@
 
 .notification-wrapper { position: relative; }
 
-.notif-bell img { filter: brightness(0) invert(1); } /* keep white icon */
+.notif-bell img { filter: brightness(0) invert(1); }
 .notif-badge {
   position: absolute;
   top: -5px;

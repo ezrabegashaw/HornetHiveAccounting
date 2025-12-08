@@ -60,7 +60,7 @@
       const password = document.getElementById('password').value;
 
       try {
-        const { user, error } = await loginUserByUsername(username, password); // in auth.js
+        const { user, error } = await loginUserByUsername(username, password);
         if (error) {
           alert("Login failed: " + (error.message || error));
           return;
@@ -68,7 +68,6 @@
 
         setSession(user); // keep your existing session function
 
-        // We already return role/active with the user object.
         if (user.role === 'Admin') {
           window.location.href = 'AdminDashBoard.html';
         } else {

@@ -54,7 +54,6 @@
   font-weight: 600;
 }
 
-/* ✅ Right-align money columns: Debit, Credit, Account Balance */
 .ledger-table th:nth-child(3),
 .ledger-table th:nth-child(4),
 .ledger-table th:nth-child(5),

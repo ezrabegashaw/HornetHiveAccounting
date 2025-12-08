@@ -1,4 +1,3 @@
-// ===================== server.js (DEV CORS WIDE-OPEN, PORT 3333) =====================
 require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
@@ -10,46 +9,46 @@ const app = express();
 // Force a dev port that isn't in use:
 const PORT = 3333;
 
-/* ----------------------------------------------------------------
+/*
    ULTRA-PERMISSIVE CORS for local dev (no cookies used)
    - Always sets Access-Control-Allow-Origin: *
    - Answers all OPTIONS preflights with 204
-------------------------------------------------------------------*/
+   */
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*'); // OK because we do NOT use credentials/cookies
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', req.header('Access-Control-Request-Headers') || 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// ===== JSON body parsing =====
+// JSON body parsing 
 app.use(express.json());
 
-// ===== Simple request logger =====
+// Simple request logger
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// ===== Supabase Clients =====
+// Supabase Clients
 const supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const supabaseAdmin  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// ===== Mailer =====
+// Mailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
-// ===== Health check =====
+// Health check
 app.get('/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
-/* ==============================================================
-   All primary routes live under /api/*
-   ==============================================================*/
+/* 
+   All primary routes live under /api/*    
+*/
 
-// --------------------- Signup ---------------------
+// Signup
 app.post('/api/signup', async (req, res) => {
   const user = req.body;
   try {
@@ -66,7 +65,7 @@ app.post('/api/signup', async (req, res) => {
     const { error } = await supabaseAdmin.from('users').insert([{
       ...user,
       password: hashedPassword,
-      old_password_plain: user.password, // dev only; remove for production
+      old_password_plain: user.password,
       approved: false,
       password_fresh,
       password_expire: password_expire.toISOString()
@@ -90,7 +89,7 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// --------------------- Approve / Reject ---------------------
+// Approve / Reject 
 app.get('/api/approve', async (req, res) => {
   const email = req.query.email;
   try {
@@ -129,7 +128,7 @@ app.get('/api/reject', async (req, res) => {
   }
 });
 
-// --------------------- Send email ---------------------
+// Send email 
 app.post("/api/send-email", async (req, res) => {
   const { to, subject, message } = req.body;
   if (!to || !subject || !message) return res.status(400).json({ error: "Recipient, subject, and message are required." });
@@ -160,7 +159,7 @@ app.post("/api/send-email-raw", async (req, res) => {
   }
 });
 
-// --------------------- Update password ---------------------
+// Update password 
 app.post("/api/update-password", async (req, res) => {
   const { email, username, newPassword } = req.body;
   if (!email || !username || !newPassword) return res.status(400).json({ message: "Email, Username, and new password are required." });
@@ -189,17 +188,16 @@ app.post("/api/update-password", async (req, res) => {
   }
 });
 
-// --------------------- Login / Lock ---------------------
-// Case-insensitive username match + plaintext -> bcrypt auto-migration
+// Login / Lock 
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // 1) CASE-INSENSITIVE lookup
+    // CASE-INSENSITIVE lookup
     const { data: user, error } = await supabaseAdmin
       .from("users")
       .select("*")
-      .ilike("username", username) // matches regardless of case
+      .ilike("username", username)
       .single();
 
     if (error || !user) {
@@ -209,7 +207,7 @@ app.post("/api/login", async (req, res) => {
       return res.status(403).json({ error: "Account awaiting approval" });
     }
 
-    // 2) PASSWORD CHECK with migration for legacy plaintext
+    // PASSWORD CHECK with migration for legacy plaintext
     const stored = user.password_hash || user.password || "";
     const looksHashed = typeof stored === "string" && stored.startsWith("$2");
 
@@ -227,8 +225,8 @@ app.post("/api/login", async (req, res) => {
           const { error: upErr } = await supabaseAdmin
             .from("users")
             .update({
-              password: newHash,       // replace plaintext with hash (same column)
-              old_password_plain: null // stop keeping plaintext
+              password: newHash,       
+              old_password_plain: null 
             })
             .eq("id", user.id);
           if (upErr) console.warn("Password migration update failed:", upErr);
@@ -242,7 +240,7 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // 3) Success: strip sensitive fields
+    // Success: strip sensitive fields
     const { password: _p, password_hash: _ph, old_password_plain: _opp, ...safeUser } = user;
     res.json({ user: safeUser });
 
@@ -264,9 +262,6 @@ app.post("/api/lock-account", async (req, res) => {
   }
 });
 
-/* ==============================================================
-   Backward-compatibility shims for older paths (if any)
-   ==============================================================*/
 const shim = (from, to, method = 'post') => {
   app[method](from, (req, res) => { req.url = to; app._router.handle(req, res); });
 };
@@ -277,13 +272,13 @@ shim('/send-email', '/api/send-email-raw', 'post');
 shim('/approve', '/api/approve', 'get');
 shim('/reject', '/api/reject', 'get');
 
-// ===== 404 catch-all =====
+// 404 catch-all
 app.use((req, res) => {
   console.warn(`No route matched ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: 'Route not found' });
 });
 
-// ===== Start =====
+// Start 
 app.listen(PORT, () => {
   console.log(`HornetHive backend running on port ${PORT}`);
 });

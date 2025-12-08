@@ -17,7 +17,7 @@
     th {background:#f8fafc; font-weight:600}
     .btn-back {margin-top:1rem; padding:.45rem .7rem; background:#0f172a; color:#fff; border-radius:8px}
     .ref a {text-decoration:underline; color:#2563eb}
-    /* ✅ money cells right-aligned with tabular numbers */
+    /* Money cells right-aligned with tabular numbers */
     .money {
       text-align:right;
       white-space:nowrap;
@@ -149,7 +149,7 @@
     ) || null;
   }
 
-  // ---------- Load Ledger ----------
+  // Load Ledger
   async function loadLedger() {
     const tbody = document.getElementById("ledgerTableBody");
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading...</td></tr>`;
@@ -216,7 +216,7 @@
       const delta = isDebitNormal ? (debitVal - creditVal) : (creditVal - debitVal);
       running = Number((running + delta).toFixed(2));
 
-      // ✅ Post Reference (clickable)
+      // Post Reference (clickable)
       const refHtml = r.journal_entry_id
         ? `<a class="ref" href="journal.html?entry_id=${r.journal_entry_id}" title="View Journal Entry #${r.journal_entry_id}">
              J-${r.journal_entry_id}
@@ -235,7 +235,7 @@
     });
   }
 
-  // ---------- Event Hooks ----------
+  // Event Hooks
   document.getElementById("applyFilters").addEventListener("click", loadLedger);
   document.getElementById("clearFilters").addEventListener("click", () => {
     document.getElementById("startDate").value = "";

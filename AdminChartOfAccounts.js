@@ -334,7 +334,7 @@ function currentFilters() {
   };
 }
 
-// ---------- Events ----------
+// Events
 document.addEventListener('DOMContentLoaded', () => {
   loadAccounts();
 
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
   popup?.addEventListener('click', (e) => { if (e.target === popup) closeModal(popup); });
   form?.addEventListener('submit', submitAccount);
 
-  // ✏️ Edit account popup
+  // Edit account popup
   editBtn?.addEventListener('click', async () => {
     await populateEditOptions();
     openModal(editOverlay);

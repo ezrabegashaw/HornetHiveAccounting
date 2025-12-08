@@ -1,10 +1,7 @@
-// journal.js — with built-in event logging for journal + ledger
-
 const db = window.supabaseClient;
 
-// -----------------------------
-// Simple event log helper (matches your table definition)
-// -----------------------------
+// Simple event log helper 
+
 async function logEvent({ action, entity, entityId, before, after }) {
   if (!db) {
     alert("logEvent: supabaseClient is not available.");
@@ -18,15 +15,13 @@ async function logEvent({ action, entity, entityId, before, after }) {
   const userId = (window.CURRENT_USER && CURRENT_USER.id) || null;
 
   const row = {
-    action: action || "Event",             // text NOT NULL
-    entity: entity || "Unknown",           // text NOT NULL (your table requires this)
-    entity_id: entityId != null ? String(entityId) : null, // your column is text
+    action: action || "Event",             
+    entity: entity || "Unknown",           
+    entity_id: entityId != null ? String(entityId) : null, 
     user_name: username,
     user_id: userId != null ? String(userId) : null,
-    // timestamp has a DEFAULT in your table, so we can omit it OR set it
-    // If we leave it out, Postgres will use now()
-    before: before || null,                // jsonb
-    after: after || null,                  // jsonb
+    before: before || null,                
+    after: after || null,                  
   };
 
   try {
@@ -44,7 +39,7 @@ async function logEvent({ action, entity, entityId, before, after }) {
 }
 
 
-// --- Money formatting helper ---
+// Money formatting helper 
 function fmtMoney(value) {
   const num = Number(value || 0);
   return "$" + num.toLocaleString(undefined, {
@@ -53,7 +48,7 @@ function fmtMoney(value) {
   });
 }
 
-// --- Current user context (role & id) ---
+// Current user context
 let CURRENT_USER = {
   username: localStorage.getItem("username") || "User",
   id: null,
@@ -86,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (ed) ed.value = "";
     const es = document.getElementById("entrySearch");
     if (es) es.value = "";
-    loadJournalEntries(true); // show all
+    loadJournalEntries(true); // Show all
   });
 
   // Search (submitted section)
@@ -111,7 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (entryId) {
     await renderJournalDetailOnly(entryId);
   } else {
-    // Normal page load -> show ALL entries initially
+    // Normal page load, show ALL entries initially
     await loadJournalEntries(true);
   }
 });
@@ -365,9 +360,9 @@ function validateJournal(render = false) {
   return { ok: errors.length === 0, errors };
 }
 
-// =========================
-// SUBMIT JOURNAL ENTRY
-// =========================
+
+// Submit journal entry
+
 async function submitJournalEntry() {
   const { ok } = validateJournal(true);
   if (!ok) return;
@@ -388,7 +383,7 @@ async function submitJournalEntry() {
     lines.push({ account_id: Number(accountId), debit, credit, description });
   }
 
-  // ✅ ALWAYS pending (manager and accountant)
+  // Always pending (manager and accountant)
   const initialStatus = "pending";
 
   const { data: entryData, error: entryError } = await db
@@ -462,7 +457,7 @@ async function submitJournalEntry() {
     if (attachErr) console.error("Attachment upload failed:", attachErr);
   }
 
-  // 🔹 Log creation event
+  // Log creation event
   await logEvent({
     action: "Journal Entry Submitted",
     entity: "Journal Entry",
@@ -481,11 +476,10 @@ async function submitJournalEntry() {
   loadJournalEntries(true);
 }
 
-// =========================
-// APPROVE ENTRY
-// =========================
+
+// Approve entry
 async function approveEntry(entryId) {
-  // BEFORE snapshot
+  // Before snapshot
   const { data: beforeEntry } = await db
     .from("journal_entries")
     .select("*")
@@ -502,7 +496,7 @@ async function approveEntry(entryId) {
     return;
   }
 
-  // AFTER snapshot
+  // After snapshot
   const { data: afterEntry } = await db
     .from("journal_entries")
     .select("*")
@@ -524,9 +518,8 @@ async function approveEntry(entryId) {
   loadJournalEntries(false);
 }
 
-// =========================
-// REJECT ENTRY
-// =========================
+
+// Reject entry
 async function rejectEntry(entryId) {
   const comment = prompt("Enter rejection reason (required):");
   if (!comment?.trim()) {
@@ -534,7 +527,7 @@ async function rejectEntry(entryId) {
     return;
   }
 
-  // BEFORE snapshot
+  // Before snapshot
   const { data: beforeEntry } = await db
     .from("journal_entries")
     .select("*")
@@ -554,7 +547,7 @@ async function rejectEntry(entryId) {
     return;
   }
 
-  // AFTER snapshot
+  // After snapshot
   const { data: afterEntry } = await db
     .from("journal_entries")
     .select("*")
@@ -647,9 +640,8 @@ async function postApprovedEntryToLedger(entryId) {
   }
 }
 
-// -------------------------
+
 // Load journal entries (filters + search)
-// -------------------------
 async function loadJournalEntries(showAll) {
   const status = showAll
     ? "all"
@@ -821,9 +813,7 @@ document.addEventListener("click", (e) => {
   if (entryId) downloadJournalAttachments(entryId);
 });
 
-// -------------------------
 // PR deep-link: show ONLY the single journal
-// -------------------------
 async function renderJournalDetailOnly(entryId) {
   document.getElementById("submittedSection")?.remove();
   document.querySelector(".form-actions")?.remove();

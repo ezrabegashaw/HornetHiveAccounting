@@ -1,12 +1,10 @@
-// eventLogs.js — Event log viewer for event_log table
-
-// ---------------- Supabase client ----------------
+// Supabase client 
 const db = window.supabaseClient;
 if (!db) {
   console.error("eventLogs.js: window.supabaseClient is missing.");
 }
 
-// ------- DOM -------
+// DOM 
 const logsEl   = document.getElementById('logs');
 const qEl      = document.getElementById('q');
 const actionEl = document.getElementById('actionFilter');
@@ -18,12 +16,12 @@ const prevBtn  = document.getElementById('prevPage');
 const nextBtn  = document.getElementById('nextPage');
 const pageInfo = document.getElementById('pageInfo');
 
-// ------- Config / Paging -------
+// Config / Paging 
 const PAGE_SIZE = 20;
 let currentPage = 1;
-let cache = []; // locally filtered for paging
+let cache = [];
 
-// ------- Helpers -------
+// Helpers 
 function fmtDateTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -48,12 +46,12 @@ function niceKey(k) {
   return (k || '').replaceAll('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-// pick a safe subset of fields to display; if object is small, show everything
+// Pick a safe subset of fields to display; if object is small, show everything
 function pickReadableFields(obj) {
   if (!obj) return null;
   const keys = Object.keys(obj);
   if (keys.length <= 24) {
-    return obj; // small — show all
+    return obj;
   }
 
   const preferred = [
@@ -82,7 +80,7 @@ function pickReadableFields(obj) {
   return out;
 }
 
-// Return set of keys that changed (to highlight)
+// Return set of keys that changed
 function diffKeys(before, after) {
   const keys = new Set([
     ...Object.keys(before || {}),
@@ -134,7 +132,7 @@ function renderKV(container, data, changedSet) {
   container.appendChild(frag);
 }
 
-// ------- Data access -------
+// Data access 
 
 // Get distinct action values for dropdown
 async function fetchDistinctActions() {
@@ -191,7 +189,7 @@ async function fetchEvents() {
   }
 }
 
-// ------- Filter + Render -------
+// Filter + Render 
 function applyFilters(rows) {
   const q = (qEl.value || '').trim().toLowerCase();
   const action = actionEl.value || '';
@@ -238,7 +236,6 @@ function applyFilters(rows) {
         });
         hay.push(...addl);
       } catch (e) {
-        // ignore JSON parse errors
       }
 
       hit = hay.some((s) => s.includes(q));
@@ -316,7 +313,7 @@ function renderPage() {
   nextBtn.disabled = currentPage >= totalPages;
 }
 
-// ------- Init -------
+// Init 
 async function init() {
   if (!db) {
     logsEl.innerHTML =
@@ -329,7 +326,7 @@ async function init() {
   await fetchDistinctActions();
   const rows = await fetchEvents();
 
-  // rows from DB BEFORE filters
+  // Rows from DB BEFORE filters
   console.log("Total events from DB:", rows.length);
 
   cache = applyFilters(rows);
@@ -371,5 +368,4 @@ nextBtn?.addEventListener('click', () => {
   }
 });
 
-// Actually start everything
 document.addEventListener('DOMContentLoaded', init);

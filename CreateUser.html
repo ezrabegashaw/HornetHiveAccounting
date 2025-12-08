@@ -91,7 +91,7 @@
   
       if (!signupForm) { console.error("signup-form not found"); return; }
   
-      // On click: generate username once the names are filled
+      // Generate username once the names are filled
       genBtn.addEventListener('click', async () => {
         const first = firstEl.value.trim();
         const last  = lastEl.value.trim();
@@ -103,7 +103,7 @@
         // Base username (first initial + last + MMYY)
         const base = makeBaseUsername(first, last, new Date());
   
-        // If ensureUniqueUsername is available (from auth.js), use it so the user sees the final unique value
+        // If ensureUniqueUsername is available, use it so the user sees the final unique value
         let finalName = base;
         try {
           if (typeof ensureUniqueUsername === 'function') {
@@ -114,7 +114,6 @@
         }
   
         userEl.value = finalName;
-        // mark as generated so we can require this before submit
         userEl.dataset.generated = "true";
       });
   
@@ -122,7 +121,6 @@
       signupForm.addEventListener("submit", async function (event) {
         event.preventDefault();
   
-        // Make sure they clicked "Generate Username" at least once
         if (!userEl.value.trim() || userEl.dataset.generated !== "true") {
           alert('Please click "Generate Username" before submitting.');
           return;
@@ -152,7 +150,7 @@
         }
   
         try {
-          const { error } = await signupUser(data); // from auth.js
+          const { error } = await signupUser(data);
           if (error) {
             alert("Signup failed: " + (error.message || JSON.stringify(error)));
             return;
