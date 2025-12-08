@@ -214,10 +214,10 @@
         return alert("Please fill in all fields.");
 
       try {
-        const res = await fetch("http://localhost:3000/send-email", {
+        const res = await fetch("http://127.0.0.1:3333/api/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emailTo, subject, body }),
+          body: JSON.stringify({ to: emailTo, subject, message: body }),
         });
 
         const data = await res.json();

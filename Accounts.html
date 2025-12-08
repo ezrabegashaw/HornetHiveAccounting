@@ -6,14 +6,18 @@
     <title>Hornet Hive Accounting - Users</title>
     <link rel="stylesheet" href="main.css">
     <link rel="stylesheet" href="users.css">
+    <link rel="stylesheet" href="messages.css">
 </head>
 
 <body class="has-sidebar">
     <header class="topbar">
         <div class="datetime" id="dateTime"></div>
-        <div class="user">
-            <img id="userAvatar" src="profile.png" alt="User">
-            <span id="userName"></span>
+        <div style="display:flex;align-items:center;gap:1rem;margin-left:auto">
+            <button class="btn" id="sendEmailBtn" title="Send email to manager or administrator">Send Email</button>
+            <div class="user">
+                <img id="userAvatar" src="profile.png" alt="User">
+                <span id="userName"></span>
+            </div>
         </div>
     </header>
 
@@ -147,7 +151,80 @@
         </script>
     </div>
 
+    <!-- Email Modal (Accounts page) -->
+    <div id="emailModal" class="message-modal" style="display:none;">
+      <div class="message-modal-content">
+        <button type="button" id="closeEmailModal" class="modal-close">&times;</button>
+        <h3>Send Email to Manager or Administrator</h3>
+        <form id="emailForm">
+          <label for="emailTo">Recipient Email</label>
+          <input type="email" id="emailTo" placeholder="user@example.com" required>
+          <label for="emailSubject">Subject</label>
+          <input type="text" id="emailSubject" placeholder="Subject..." required>
+          <label for="emailBody">Message</label>
+          <textarea id="emailBody" rows="6" placeholder="Type your message..." required></textarea>
+          <div class="form-actions">
+            <button type="submit" class="btn">Send Email</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
     <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const emailModal = document.getElementById('emailModal');
+        const sendEmailBtn = document.getElementById('sendEmailBtn');
+        const closeEmailModal = document.getElementById('closeEmailModal');
+        const emailForm = document.getElementById('emailForm');
+
+        sendEmailBtn.addEventListener('click', () => {
+          emailModal.style.display = 'block';
+        });
+
+        closeEmailModal.addEventListener('click', () => {
+          emailModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+          if (e.target === emailModal) {
+            emailModal.style.display = 'none';
+          }
+        });
+
+        emailForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const emailTo = document.getElementById('emailTo').value.trim();
+          const subject = document.getElementById('emailSubject').value.trim();
+          const body = document.getElementById('emailBody').value.trim();
+
+          if (!emailTo || !subject || !body)
+            return alert('Please fill in all fields.');
+
+          try {
+            const res = await fetch('http://127.0.0.1:3333/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: emailTo, subject, message: body }),
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+              alert('✅ Email sent successfully!');
+              emailForm.reset();
+              emailModal.style.display = 'none';
+            } else {
+              alert('❌ Failed to send email: ' + data.error);
+            }
+          } catch (err) {
+            console.error(err);
+            alert('❌ An error occurred while sending the email.');
+          }
+        });
+      });
+    </script>
+
       // Logout functionality - attach to all logout buttons (admin and acct/mgr sidebar)
     document.querySelectorAll('.logoutBtn').forEach(btn => btn.addEventListener('click', async () => {
       try {
