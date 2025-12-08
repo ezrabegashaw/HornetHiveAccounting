@@ -449,31 +449,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
   emailForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+    const db = window.supabaseClient || (window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null);
+    
+    if (!db) {
+      alert('❌ Database connection failed.');
+      return;
+    }
+
     const emailTo = document.getElementById('emailTo').value.trim();
     const subject = document.getElementById('emailSubject').value.trim();
     const body = document.getElementById('emailBody').value.trim();
+    const currentUserId = localStorage.getItem('user_id');
+    const currentUsername = localStorage.getItem('username');
 
     if (!emailTo || !subject || !body)
       return alert('Please fill in all fields.');
 
     try {
-      const res = await fetch('http://127.0.0.1:3333/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: emailTo, subject, message: body }),
-      });
+      // Find recipient by email
+      const { data: recipient, error: findError } = await db
+        .from('users')
+        .select('id')
+        .eq('email', emailTo)
+        .single();
 
-      const data = await res.json();
-      if (res.ok) {
-        alert('✅ Email sent successfully!');
-        emailForm.reset();
-        emailModal.style.display = 'none';
-      } else {
-        alert('❌ Failed to send email: ' + data.error);
+      if (findError || !recipient) {
+        alert('❌ Recipient email not found in system.');
+        return;
       }
+
+      // Insert message into internal messaging system
+      const { error: insertError } = await db
+        .from('messages')
+        .insert({
+          sender_id: currentUserId,
+          receiver_id: recipient.id,
+          subject,
+          body
+        });
+
+      if (insertError) {
+        alert('❌ Failed to send message: ' + insertError.message);
+        return;
+      }
+
+      alert('✅ Message sent successfully!');
+      emailForm.reset();
+      emailModal.style.display = 'none';
     } catch (err) {
       console.error(err);
-      alert('❌ An error occurred while sending the email.');
+      alert('❌ An error occurred while sending the message.');
     }
   });
 });
