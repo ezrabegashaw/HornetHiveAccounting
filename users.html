@@ -192,41 +192,91 @@
   window.USE_SUPABASE = true;
 
   //Load users onto a table
-  async function getUsers() {
-    const {data, error} = await supabaseClient
+  let usersCache = [];
+  async function getUsers(searchTerm = '') {
+    let query = supabaseClient
       .from('users')
       .select('*')
       .eq('approved', true);
 
-      const tableBody = document.getElementById('userTable').getElementsByTagName('tbody')[0];
-      tableBody.innerHTML = ''; // Clear existing rows
+    if (searchTerm && searchTerm.trim()) {
+      const term = `%${searchTerm.trim()}%`;
+      // Search first_name, last_name, email, role
+      query = query.or(
+        `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},role.ilike.${term}`
+      );
+    }
 
-      data.forEach(user => {
-        const newRow = tableBody.insertRow();
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error loading users:', error);
+      return;
+    }
 
-        const email = newRow.insertCell(0);
-        email.textContent = user.email;
+    usersCache = data || []; // keep cache if you want to support local filtering after server call
+    renderUsers(usersCache);
+  }
 
-        const name = newRow.insertCell(1);
-        name.textContent = user.first_name + " " + user.last_name;
+  function renderUsers(data) {
+    const tableBody = document.getElementById('userTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = ''; // Clear existing rows
 
-        const role = newRow.insertCell(2);
-        role.textContent = user.role;
+    if (!data || data.length === 0) {
+      const row = tableBody.insertRow();
+      const cell = row.insertCell(0);
+      cell.colSpan = 5;
+      cell.textContent = 'No users found.';
+      cell.style.textAlign = 'center';
+      return;
+    }
 
-        const active = newRow.insertCell(3);
-        active.textContent = user.active ? '✅' : '❌';
+    data.forEach(user => {
+      const newRow = tableBody.insertRow();
 
-        //Action Buttons
+      const email = newRow.insertCell(0);
+      email.textContent = user.email;
 
-        const actionCell = newRow.insertCell(4);
-        const editButton = document.createElement('button');
-        editButton.textContent = 'Edit';
-        editButton.className = 'edit-btn';
-        editButton.onclick = () => showEditPopup(user);
-        actionCell.appendChild(editButton);
+      const name = newRow.insertCell(1);
+      name.textContent = user.first_name + " " + user.last_name;
+
+      const role = newRow.insertCell(2);
+      role.textContent = user.role;
+
+      const active = newRow.insertCell(3);
+      active.textContent = user.active ? '✅' : '❌';
+
+      //Action Buttons
+
+      const actionCell = newRow.insertCell(4);
+      const editButton = document.createElement('button');
+      editButton.textContent = 'Edit';
+      editButton.className = 'edit-btn';
+      editButton.onclick = () => showEditPopup(user);
+      actionCell.appendChild(editButton);
 
 
-      });
+    });
+  }
+
+  // Debounce helper and search wiring (server-side search)
+  function debounce(fn, wait = 300) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    const onSearchRemote = debounce(() => {
+      const q = searchInput.value.trim();
+      getUsers(q);
+    }, 300);
+    searchInput.addEventListener('input', onSearchRemote);
+    document.getElementById('searchBtn')?.addEventListener('click', () => {
+      getUsers(searchInput.value.trim());
+    });
   }
 
    async function showEditPopup(user) {
