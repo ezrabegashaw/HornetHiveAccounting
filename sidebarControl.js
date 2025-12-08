@@ -62,4 +62,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 	if (sidebarDiv) {
 		sidebarDiv.innerHTML = sidebarHtml;
 	}
+
+
+	//Logut Functionality
+	document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+		try { 
+			if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+		} catch(e){}
+		localStorage.removeItem('username');
+		localStorage.removeItem('first_name');
+		location.href = 'HornetHiveLogin.html';
+		});
 });
