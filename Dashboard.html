@@ -6,6 +6,20 @@
   <title>HHA Dashboard</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="messages.css">
+  <style>
+    .status-dot{
+      display:inline-block;
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      margin-left:6px;
+      background:#ccc;
+      vertical-align:middle;
+    }
+    .status-green{ background:#11a633; }
+    .status-yellow{ background:#f0ad18; }
+    .status-red{ background:#d9534f; }
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -73,27 +87,27 @@
     <div class="grid">
       <div class="card">
         <h4>Current Ratio</h4>
-        <p id="currentRatioValue">--</p>
+        <p><span id="currentRatioValue">--</span><span id="currentRatioDot" class="status-dot"></span></p>
       </div>
       <div class="card">
         <h4>Return on Assets</h4>
-        <p id="roaValue">--</p>
+        <p><span id="roaValue">--</span><span id="roaDot" class="status-dot"></span></p>
       </div>
       <div class="card">
         <h4>Return on Equity</h4>
-        <p id="roeValue">--</p>
+        <p><span id="roeValue">--</span><span id="roeDot" class="status-dot"></span></p>
       </div>
       <div class="card">
         <h4>Net Profit Margin</h4>
-        <p id="netMarginValue">--</p>
+        <p><span id="netMarginValue">--</span><span id="netMarginDot" class="status-dot"></span></p>
       </div>
       <div class="card">
         <h4>Asset Turnover</h4>
-        <p id="assetTurnoverValue">--</p>
+        <p><span id="assetTurnoverValue">--</span><span id="assetTurnoverDot" class="status-dot"></span></p>
       </div>
       <div class="card">
         <h4>Quick Ratio</h4>
-        <p id="quickRatioValue">--</p>
+        <p><span id="quickRatioValue">--</span><span id="quickRatioDot" class="status-dot"></span></p>
       </div>
     </div>
   </main>
@@ -121,7 +135,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- ===== password expiry check (unchanged) ===== -->
+<!-- password-expiry check (unchanged) -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -153,7 +167,7 @@
   });
 </script>
 
-<!-- ====== RATIO CALCULATIONS (NEW, same logic as Admin) ====== -->
+<!-- RATIO CALCULATIONS WITH COLOR DOTS (same logic as admin) -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -184,7 +198,6 @@
       Revenue: 0,
       Expense: 0
     };
-
     let inventoryTotal = 0;
 
     data.forEach(row => {
@@ -214,14 +227,53 @@
       return num / den;
     }
 
-    function formatNumber(value) {
-      if (value === null) return "--";
-      return value.toFixed(2);
-    }
-
     function formatPercent(value) {
       if (value === null) return "--";
       return (value * 100).toFixed(2) + "%";
+    }
+
+    function getStatus(type, value) {
+      if (value === null) return null;
+
+      switch (type) {
+        case "current":
+        case "quick":
+          if (value >= 2) return "green";
+          if (value >= 1) return "yellow";
+          return "red";
+        case "netMargin":
+          if (value >= 0.20) return "green";
+          if (value >= 0.05) return "yellow";
+          return "red";
+        case "roa":
+          if (value >= 0.08) return "green";
+          if (value >= 0.03) return "yellow";
+          return "red";
+        case "roe":
+          if (value >= 0.15) return "green";
+          if (value >= 0.08) return "yellow";
+          return "red";
+        case "assetTurnover":
+          if (value >= 1.0) return "green";
+          if (value >= 0.5) return "yellow";
+          return "red";
+        default:
+          return null;
+      }
+    }
+
+    function setRatio(idBase, value, type) {
+      const valueEl = document.getElementById(idBase + "Value");
+      const dotEl   = document.getElementById(idBase + "Dot");
+      if (!valueEl || !dotEl) return;
+
+      valueEl.textContent = formatPercent(value);
+
+      dotEl.classList.remove("status-green", "status-yellow", "status-red");
+      const status = getStatus(type, value);
+      if (status === "green") dotEl.classList.add("status-green");
+      else if (status === "yellow") dotEl.classList.add("status-yellow");
+      else if (status === "red") dotEl.classList.add("status-red");
     }
 
     const currentRatio   = safeRatio(assets, liabilities);
@@ -231,17 +283,12 @@
     const returnOnEquity = safeRatio(netIncome, equity);
     const assetTurnover  = safeRatio(revenue, assets);
 
-    const setText = (id, text) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    };
-
-    setText("currentRatioValue",   formatNumber(currentRatio));
-    setText("quickRatioValue",     formatNumber(quickRatio));
-    setText("assetTurnoverValue",  formatNumber(assetTurnover));
-    setText("netMarginValue",      formatPercent(netMargin));
-    setText("roaValue",            formatPercent(returnOnAssets));
-    setText("roeValue",            formatPercent(returnOnEquity));
+    setRatio("currentRatio",   currentRatio,   "current");
+    setRatio("quickRatio",     quickRatio,     "quick");
+    setRatio("assetTurnover",  assetTurnover,  "assetTurnover");
+    setRatio("netMargin",      netMargin,      "netMargin");
+    setRatio("roa",            returnOnAssets, "roa");
+    setRatio("roe",            returnOnEquity, "roe");
   });
 </script>
 
@@ -380,6 +427,7 @@
       <h3>Users</h3>
       <p>Administrators and staff who have access to the system. Permissions determine who may view, edit, or approve entries.</p>
     </div>
+
   </div>
 </div>
 
