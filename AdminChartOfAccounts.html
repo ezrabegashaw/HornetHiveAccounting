@@ -120,10 +120,10 @@
 <header class="topbar">
   <button class="btn" id="calendarToggleBtn">Calendar</button>
   <div class="datetime" id="dateTime"></div>
-    <div class="user">
-      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
-      <span id="userName"></span>
-    </div>
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
+    <span id="userName"></span>
+  </div>
 </header>
 
 <script>
@@ -140,19 +140,8 @@
 </script>
 
 <div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-    </div>
-    <ul class="nav">
-      <li><a href="AdminDashBoard.html">Dashboard</a></li>
-      <li><a href="AdminChartOfAccounts.html" aria-current="page">Chart of Accounts</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
-      <li><a href="Users.html">Users</a></li>
-      <li><a href="EventLogs.html">Event Logs</a></li>
-    </ul>
-    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
-  </aside>
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
 
   <main class="main">
     <div class="header">
@@ -508,4 +497,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-<script src="sidebarControl.js"></script>

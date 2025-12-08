@@ -27,7 +27,7 @@
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
 
-    <div class="topbar-right">
+  <div class="topbar-right">
     <button class="btn" id="sendEmailBtn" title="Send an email to a user">Send Email</button>
 
     <div class="notification-wrapper">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="user">
-      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+      <img id="userAvatar" src="profile.png" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -64,19 +64,8 @@
 </script>
 
 <div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-    </div>
-    <ul class="nav">
-      <li><a href="AdminDashBoard.html" aria-current="page">Dashboard</a></li>
-      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
-      <li><a href="Users.html">Users</a></li>
-      <li><a href="EventLogs.html">Event Logs</a></li>
-    </ul>
-    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
-  </aside>
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
 
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
@@ -127,11 +116,11 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- Password-expiry warning (unchanged) -->
 <script>
@@ -531,4 +520,3 @@
 
 </body>
 </html>
-<script src="sidebarControl.js"></script>

@@ -43,7 +43,7 @@
     </div>
 
     <div class="user">
-      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+      <img id="userAvatar" src="profile.png" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -63,7 +63,8 @@
 </script>
 
 <div class="app">
-  <aside class="sidebar">
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
     <div class="brand">
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
@@ -129,11 +130,11 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- password-expiry check (unchanged) -->
 <script>
@@ -444,6 +445,5 @@
   });
 </script>
 
-<script src="sidebarControl.js"></script>
 </body>
 </html>

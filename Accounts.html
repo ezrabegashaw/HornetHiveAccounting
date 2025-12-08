@@ -15,7 +15,7 @@
         <div style="display:flex;align-items:center;gap:1rem;margin-left:auto">
             <button class="btn" id="sendEmailBtn" title="Send email to manager or administrator">Send Email</button>
             <div class="user">
-                <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+                <img id="userAvatar" src="profile.png" alt="User">
                 <span id="userName"></span>
             </div>
         </div>
@@ -44,7 +44,7 @@
             <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
           </div>
           <ul class="nav">
-            <li><a href="AdminDashBoard.html">Dashboard</a></li>
+            <li><a href="AdminDashboard.html">Dashboard</a></li>
             <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
             <li><a href="Accounts.html" aria-current="page">Accounts</a></li>
             <li><a href="Users.html">Users</a></li>
@@ -61,14 +61,13 @@
           <ul class="nav">
             <li><a href="Dashboard.html">Dashboard</a></li>
             <li><a href="ChartOfAccounts.html">Chart of Accounts</a></li>
-            <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html" aria-current="page">Accounts</a></li>
-            <li><a href="journal.html">Journalize</a></li>
+            <li><a href="journal.html">Journal</a></li>
+            <li><a href="Ledger.html">Ledger</a></li>
             <li><a href="trial_balance.html">Trial Balance</a></li>
             <li><a href="income_statement.html">Income Statement</a></li>
             <li><a href="balance_sheet.html">Balance Sheet</a></li>
             <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
-          </ul>
-          <div class="sidebar-footer"><button class="btn logoutBtn">Logout</button></div>
+            <li><a href="EventLogs.html">Event Logs</a></li>
         </aside>
         <main class="main">
             <form id="accountForm" class="card">
@@ -81,29 +80,14 @@
                         <option value="credit">Credit</option>
                     </select>
                 </label>
-                <label>Category: <input type="text" name="category" required /></label>
-                <label>Subcategory: <input type="text" name="subcategory" required /></label>
-                <label>Initial Balance: <input type="number" step="0.01" name="initialBalance" required /></label>
-                <label>Debit: <input type="number" step="0.01" name="debit" required /></label>
-                <label>Credit: <input type="number" step="0.01" name="credit" required /></label>
-                <label>Balance: <input type="number" step="0.01" name="balance" required /></label>
-                <label>Date Added: <input type="datetime-local" name="dateAdded" required /></label>
-                <label>User ID: <input type="text" name="userId" required /></label>
-                <label>Order: <input type="text" name="order" required /></label>
-                <label>
-                    Statement:
-                    <select name="statement" required>
-                        <option value="IS">Income Statement</option>
-                        <option value="BS">Balance Sheet</option>
-                        <option value="RE">Retained Earnings</option>
-                    </select>
-                </label>
-                <label>Comment: <textarea name="comment"></textarea></label>
-
-                <div class="form-actions">
-                    <button type="submit">Save Account</button>
-                </div>
-            </form>
+              <li id="accountsForAcctMgr" style="display:none"><a href="Accounts.html" aria-current="page">Accounts</a></li>
+              <li><a href="journal.html">Journal</a></li>
+              <li><a href="Ledger.html">Ledger</a></li>
+              <li><a href="trial_balance.html">Trial Balance</a></li>
+              <li><a href="income_statement.html">Income Statement</a></li>
+              <li><a href="balance_sheet.html">Balance Sheet</a></li>
+          <div id="sidebar"></div>
+          <script src="sidebarControl.js"></script>
         </main>
 
         <script type="module">
@@ -384,7 +368,24 @@
 </script>
 
 <!-- Role-based sidebar toggle: show acct/mgr sidebar for Manager or Accountant -->
-  </body>
-
-  <script src="sidebarControl.js"></script>
+<script>
+  (function(){
+    const role = (localStorage.getItem('role') || '').toLowerCase();
+    if (!role) return;
+    if (role === 'manager' || role === 'accountant') {
+      const mgrSidebar = document.getElementById('acctMgrSidebar');
+      if (mgrSidebar) {
+        // remove the inline `display:none` so the CSS `display:flex` applies
+        mgrSidebar.style.removeProperty('display');
+      }
+      // hide the default admin sidebar (the first sidebar on the page that is not mgrSidebar)
+      const sidebars = document.querySelectorAll('aside.sidebar');
+      sidebars.forEach(sb => { if (sb.id !== 'acctMgrSidebar') sb.style.display = 'none'; });
+      // show Accounts link under Chart of Accounts for acct/mgr when present
+      const acctEntry = document.getElementById('accountsForAcctMgr');
+      if (acctEntry) acctEntry.style.display = 'block';
+    }
+  })();
+</script>
+</body>
 </html>

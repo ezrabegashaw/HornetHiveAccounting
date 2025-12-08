@@ -99,8 +99,8 @@
 <body class="has-sidebar">
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
-    <div class="user">
-    <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+  <div class="user">
+    <img id="userAvatar" src="profile.png" alt="User">
     <span id="userName"></span>
   </div>
 </header>
@@ -124,7 +124,8 @@
 </script>
 
 <div class="app">
-  <aside class="sidebar">
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
     <div class="brand">
       <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
     </div>
@@ -312,6 +313,5 @@
   });
 </script>
 
-<script src="sidebarControl.js"></script>
 </body>
 </html>

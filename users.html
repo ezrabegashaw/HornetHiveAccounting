@@ -13,7 +13,7 @@
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
   <div class="user">
-    <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+    <img id="userAvatar" src="profile.png" alt="User">
     <span id="userName"></span>
   </div>
 </header>
@@ -38,20 +38,8 @@
 
 <div class="app">
 
-  <!-- ADMIN SIDEBAR -->
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
-    </div>
-    <ul class="nav">
-      <li><a href="AdminDashBoard.html">Dashboard</a></li>
-      <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
-      <li><a href="Accounts.html">Accounts</a></li>
-      <li><a href="Users.html" aria-current="page">Users</a></li>
-      <li><a href="EventLogs.html">Event Logs</a></li>
-    </ul>
-    <div class="sidebar-footer"><button class="btn" id="logoutBtn">Logout</button></div>
-  </aside>
+  <div id="sidebar"></div>
+  <script src="sidebarControl.js"></script>
 
 
   
@@ -174,7 +162,8 @@
   </main>
 
 </div>
-
+  
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script type="module">
@@ -735,6 +724,5 @@
   });
 </script>
 
-<script src="sidebarControl.js"></script>
 </body>
 </html>

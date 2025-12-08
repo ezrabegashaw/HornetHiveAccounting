@@ -44,7 +44,7 @@
   <div style="display:flex;align-items:center;gap:1rem;margin-left:auto">
     <button class="btn" id="sendEmailBtn" title="Send email to manager or accountant">Send Email</button>
     <div class="user">
-      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+      <img id="userAvatar" src="profile.png" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -80,7 +80,7 @@
       
     </ul>
     <div class="sidebar-footer">
-      <button class="btn" onclick="logout()">Logout</button>
+      <button class="btn" onclick="localStorage.clear();location.href='HornetHiveLogin.html'">Logout</button>
     </div>
   </aside>
 
@@ -90,23 +90,8 @@
 
       <!-- Search + Filters -->
       <div class="filters">
-        <div class="field">
-          <label for="searchInput">Search (name/number)</label>
-          <input id="searchInput" type="text" placeholder="Search by name or number">
-        </div>
-        <div class="field">
-          <label for="typeFilter">Account Type</label>
-          <select id="typeFilter">
-            <option value="">All</option>
-            <option>Asset</option>
-            <option>Liability</option>
-            <option>Equity</option>
-            <option>Revenue</option>
-            <option>Expense</option>
-            <option>Contra Asset</option>
-          </select>
-        </div>
-        <div class="field">
+        <div id="sidebar"></div>
+        <script src="sidebarControl.js"></script>
           <label for="numFilter">Acct # (prefix/contains)</label>
           <input id="numFilter" type="text" placeholder="e.g. 10, 110, or 1">
         </div>
@@ -506,4 +491,3 @@
 
 </body>
 </html>
-<script src="sidebarControl.js"></script>

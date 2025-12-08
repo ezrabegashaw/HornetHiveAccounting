@@ -1,3 +1,8 @@
+/* Prevent duplicate sidebar containers from causing extra spacing */
+#sidebar + #sidebar { display: none; }
+
+/* If sidebar is rendered twice, hide the second one */
+.sidebar + .sidebar { display: none; }
 
 /* ===== main.css (sidebar layout + top-left logo) ===== */
 :root{

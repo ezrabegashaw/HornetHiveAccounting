@@ -5,12 +5,15 @@
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-  // Use the shared Supabase client created by `auth.js` (do NOT create another client here).
-  // Creating multiple clients in the same page can trigger multiple GoTrue instances
-  // and cause the 'Multiple GoTrueClient instances detected' warning.
-  const supabaseClient = window.supabaseClient;
+  // Try to reuse existing client from auth.js, else create our own
+  let supabaseClient = window.supabaseClient;
+  if (!supabaseClient && window.supabase) {
+    const { createClient } = window.supabase;
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
   if (!supabaseClient) {
-    console.warn("[message.js] Supabase client not available (expecting window.supabaseClient). Notifications disabled.");
+    console.warn("[message.js] Supabase client not available.");
     return;
   }
 
@@ -148,20 +151,6 @@
 
     list.innerHTML = '<li class="notif-empty">Loading...</li>';
 
-    // Validate currentUserId before querying. If receiver_id in the DB is a UUID
-    // (common with Supabase auth), querying with a non-UUID (e.g., numeric id)
-    // will produce a 400/22P02 error. Guard and show a friendly UI message.
-    function isUuid(v) {
-      return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-    }
-
-    if (!currentUserId || !isUuid(currentUserId)) {
-      console.warn('[message.js] Skipping message load: invalid or missing user id', currentUserId);
-      list.innerHTML = '<li class="notif-empty">Notifications unavailable</li>';
-      badge.style.display = 'none';
-      return;
-    }
-
     try {
       const { data: messages, error } = await supabaseClient
         .from("messages")
@@ -170,7 +159,7 @@
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("[message.js] Error loading messages:", error, { receiver_id: currentUserId });
+        console.error("[message.js] Error loading messages:", error);
         list.innerHTML = '<li class="notif-empty">Error loading messages.</li>';
         return;
       }
