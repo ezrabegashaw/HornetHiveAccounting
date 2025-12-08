@@ -6,6 +6,20 @@
   <title>HHA Dashboard</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="messages.css">
+  <style>
+    .status-dot{
+      display:inline-block;
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      margin-left:6px;
+      background:#ccc;
+      vertical-align:middle;
+    }
+    .status-green{ background:#11a633; }
+    .status-yellow{ background:#f0ad18; }
+    .status-red{ background:#d9534f; }
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -13,7 +27,7 @@
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
 
-  <div class="topbar-right">
+    <div class="topbar-right">
     <button class="btn" id="sendEmailBtn" title="Send an email to a user">Send Email</button>
 
     <div class="notification-wrapper">
@@ -30,7 +44,7 @@
     </div>
 
     <div class="user">
-      <img id="userAvatar" src="profile.png" alt="User">
+      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -66,11 +80,33 @@
 
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
+
+    <!-- ====== SIX RATIO CARDS ====== -->
     <div class="grid">
-      <div class="card"><h4>Current Ratio</h4><p></p></div>
-      <div class="card"><h4>Return on Assets</h4><p></p></div>
-      <div class="card"><h4>Return on Equity</h4><p></p></div>
-      <div class="card"><h4>Net Profit Margin</h4><p></p></div>
+      <div class="card">
+        <h4>Current Ratio</h4>
+        <p><span id="currentRatioValue">--</span><span id="currentRatioDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Return on Assets</h4>
+        <p><span id="roaValue">--</span><span id="roaDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Return on Equity</h4>
+        <p><span id="roeValue">--</span><span id="roeDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Net Profit Margin</h4>
+        <p><span id="netMarginValue">--</span><span id="netMarginDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Asset Turnover</h4>
+        <p><span id="assetTurnoverValue">--</span><span id="assetTurnoverDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Quick Ratio</h4>
+        <p><span id="quickRatioValue">--</span><span id="quickRatioDot" class="status-dot"></span></p>
+      </div>
     </div>
   </main>
 </div>
@@ -91,17 +127,22 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<!-- Password-expiry warning (unchanged) -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase?.createClient
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : window.supabaseClient;
+
+    if (!supabaseClient) return;
 
     const username = localStorage.getItem("username");
     if (!username) return;
@@ -124,6 +165,7 @@
   });
 </script>
 
+<!-- Notifications dropdown (unchanged) -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const bell = document.getElementById('notifBell');
@@ -140,6 +182,7 @@
   });
 </script>
 
+<!-- Email modal (unchanged) -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const emailModal = document.getElementById("emailModal");
@@ -171,10 +214,10 @@
         return alert("Please fill in all fields.");
 
       try {
-        const res = await fetch("http://localhost:3000/send-email", {
+        const res = await fetch("http://127.0.0.1:3333/api/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ emailTo, subject, body }),
+          body: JSON.stringify({ to: emailTo, subject, message: body }),
         });
 
         const data = await res.json();
@@ -193,16 +236,152 @@
   });
 </script>
 
+<!-- ===== RATIO CALCULATIONS WITH COLOR DOTS ===== -->
 <script>
-    // Logout functionality
+  document.addEventListener("DOMContentLoaded", async () => {
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+    const db = window.supabaseClient || (window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+
+    if (!db) {
+      console.error("Supabase client not available for ratios.");
+      return;
+    }
+
+    const { data, error } = await db
+      .from("v_account_balances")
+      .select("account_category, account_name, computed_balance");
+
+    if (error) {
+      console.error("Error loading account balances for ratios:", error);
+      return;
+    }
+
+    const totals = {
+      Asset: 0,
+      Liability: 0,
+      Equity: 0,
+      Revenue: 0,
+      Expense: 0
+    };
+    let inventoryTotal = 0;
+
+    data.forEach(row => {
+      const cat = row.account_category;
+      const val = Number(row.computed_balance) || 0;
+
+      if (totals.hasOwnProperty(cat)) {
+        totals[cat] += val;
+      }
+
+      if (cat === "Asset" && typeof row.account_name === "string") {
+        if (row.account_name.toLowerCase().includes("inventory")) {
+          inventoryTotal += val;
+        }
+      }
+    });
+
+    const assets      = totals.Asset;
+    const liabilities = totals.Liability;
+    const equity      = totals.Equity;
+    const revenue     = totals.Revenue;
+    const expenses    = totals.Expense;
+    const netIncome   = revenue - expenses;
+
+    function safeRatio(num, den) {
+      if (!den || !isFinite(den)) return null;
+      return num / den;
+    }
+
+    // Always return a string with a percent sign
+    function formatPercent(value) {
+      if (value === null) return "--";
+      return (value * 100).toFixed(2) + "%";
+    }
+
+    function getStatus(type, value) {
+      if (value === null) return null;
+
+      switch (type) {
+        case "current":
+        case "quick":
+          // current/quick ratio: good >= 2, warning 1–2, red < 1
+          if (value >= 2) return "green";
+          if (value >= 1) return "yellow";
+          return "red";
+
+        case "netMargin":
+          // net margin: good >= 20%, warning 5–20%
+          if (value >= 0.20) return "green";
+          if (value >= 0.05) return "yellow";
+          return "red";
+
+        case "roa":
+          // ROA: good >= 8%, warning 3–8%
+          if (value >= 0.08) return "green";
+          if (value >= 0.03) return "yellow";
+          return "red";
+
+        case "roe":
+          // ROE: good >= 15%, warning 8–15%
+          if (value >= 0.15) return "green";
+          if (value >= 0.08) return "yellow";
+          return "red";
+
+        case "assetTurnover":
+          // Asset turnover: good >= 1.0, warning 0.5–1.0
+          if (value >= 1.0) return "green";
+          if (value >= 0.5) return "yellow";
+          return "red";
+
+        default:
+          return null;
+      }
+    }
+
+    function setRatio(idBase, value, type) {
+      const valueEl = document.getElementById(idBase + "Value");
+      const dotEl   = document.getElementById(idBase + "Dot");
+      if (!valueEl || !dotEl) return;
+
+      valueEl.textContent = formatPercent(value);
+
+      dotEl.classList.remove("status-green", "status-yellow", "status-red");
+      const status = getStatus(type, value);
+      if (status === "green") dotEl.classList.add("status-green");
+      else if (status === "yellow") dotEl.classList.add("status-yellow");
+      else if (status === "red") dotEl.classList.add("status-red");
+    }
+
+    const currentRatio   = safeRatio(assets, liabilities);
+    const quickRatio     = safeRatio(assets - inventoryTotal, liabilities);
+    const netMargin      = safeRatio(netIncome, revenue);
+    const returnOnAssets = safeRatio(netIncome, assets);
+    const returnOnEquity = safeRatio(netIncome, equity);
+    const assetTurnover  = safeRatio(revenue, assets);
+
+    setRatio("currentRatio",   currentRatio,   "current");
+    setRatio("quickRatio",     quickRatio,     "quick");
+    setRatio("assetTurnover",  assetTurnover,  "assetTurnover");
+    setRatio("netMargin",      netMargin,      "netMargin");
+    setRatio("roa",            returnOnAssets, "roa");
+    setRatio("roe",            returnOnEquity, "roe");
+  });
+</script>
+
+<script>
+  // Logout functionality
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    try { 
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    try {
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
     } catch(e){}
     localStorage.removeItem('username');
     localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
-   });
+  });
 </script>
 
 <script src="message.js"></script>
@@ -271,7 +450,6 @@
   .help-topic { margin-bottom: 1.2rem; }
   .help-topic h3 { margin-bottom: 0.4rem; color: #0a58ca; }
 </style>
-
 
 <button id="helpBtn">Help</button>
 
@@ -353,3 +531,4 @@
 
 </body>
 </html>
+<script src="sidebarControl.js"></script>

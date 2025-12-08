@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="chart_override.css">
   <link rel="stylesheet" href="ledger_popup.css">
+  <link rel="stylesheet" href="messages.css">
   <style>
     .popup-overlay{
       display:none;
@@ -119,10 +120,10 @@
 <header class="topbar">
   <button class="btn" id="calendarToggleBtn">Calendar</button>
   <div class="datetime" id="dateTime"></div>
-  <div class="user">
-    <img id="userAvatar" src="profile.png" alt="User">
-    <span id="userName"></span>
-  </div>
+    <div class="user">
+      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+      <span id="userName"></span>
+    </div>
 </header>
 
 <script>
@@ -193,6 +194,7 @@
 
         <button id="addAccountBtn" class="button">Add Account</button>
         <button id="deactivateAccountBtn" class="button">Deactivate Account</button>
+        <button id="sendEmailBtn" class="button">Send Email</button>
       </div>
     </div>
 
@@ -266,6 +268,25 @@
         <select id="deactivateAccountSelect" required><option value="">-- Select an Account --</option></select>
       </div>
       <div class="form-actions popup-actions"><button type="submit">Deactivate</button><button type="button" class="button cancel-btn" id="closeDeactivatePopup">Cancel</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Email Modal (AdminChartOfAccounts page) -->
+<div id="emailModal" class="message-modal" style="display:none;">
+  <div class="message-modal-content">
+    <button type="button" id="closeEmailModal" class="modal-close">&times;</button>
+    <h3>Send Email</h3>
+    <form id="emailForm">
+      <label for="emailTo">Recipient Email</label>
+      <input type="email" id="emailTo" placeholder="user@example.com" required>
+      <label for="emailSubject">Subject</label>
+      <input type="text" id="emailSubject" placeholder="Subject..." required>
+      <label for="emailBody">Message</label>
+      <textarea id="emailBody" rows="6" placeholder="Type your message..." required></textarea>
+      <div class="form-actions">
+        <button type="submit" class="btn">Send Email</button>
+      </div>
     </form>
   </div>
 </div>
@@ -404,5 +425,87 @@
   });
 </script>
 
+<!-- Email Handler Script (AdminChartOfAccounts page) -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const emailModal = document.getElementById('emailModal');
+  const sendEmailBtn = document.getElementById('sendEmailBtn');
+  const closeEmailModal = document.getElementById('closeEmailModal');
+  const emailForm = document.getElementById('emailForm');
+
+  sendEmailBtn.addEventListener('click', () => {
+    emailModal.style.display = 'block';
+  });
+
+  closeEmailModal.addEventListener('click', () => {
+    emailModal.style.display = 'none';
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target === emailModal) {
+      emailModal.style.display = 'none';
+    }
+  });
+
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+    const db = window.supabaseClient || (window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null);
+    
+    if (!db) {
+      alert('❌ Database connection failed.');
+      return;
+    }
+
+    const emailTo = document.getElementById('emailTo').value.trim();
+    const subject = document.getElementById('emailSubject').value.trim();
+    const body = document.getElementById('emailBody').value.trim();
+    const currentUserId = localStorage.getItem('user_id');
+    const currentUsername = localStorage.getItem('username');
+
+    if (!emailTo || !subject || !body)
+      return alert('Please fill in all fields.');
+
+    try {
+      // Find recipient by email
+      const { data: recipient, error: findError } = await db
+        .from('users')
+        .select('id')
+        .eq('email', emailTo)
+        .single();
+
+      if (findError || !recipient) {
+        alert('❌ Recipient email not found in system.');
+        return;
+      }
+
+      // Insert message into internal messaging system
+      const { error: insertError } = await db
+        .from('messages')
+        .insert({
+          sender_id: currentUserId,
+          receiver_id: recipient.id,
+          subject,
+          body
+        });
+
+      if (insertError) {
+        alert('❌ Failed to send message: ' + insertError.message);
+        return;
+      }
+
+      alert('✅ Message sent successfully!');
+      emailForm.reset();
+      emailModal.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      alert('❌ An error occurred while sending the message.');
+    }
+  });
+});
+</script>
+
 </body>
 </html>
+<script src="sidebarControl.js"></script>

@@ -6,6 +6,7 @@
   <title>Chart of Accounts (Read-Only)</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="chart_override.css">
+  <link rel="stylesheet" href="messages.css">
   <style>
     .filters{
       display:flex;
@@ -40,9 +41,12 @@
 <header class="topbar">
   <button class="btn" id="calendarToggleBtn">Calendar</button>
   <div class="datetime" id="dateTime"></div>
-  <div class="user">
-    <img id="userAvatar" src="profile.png" alt="User">
-    <span id="userName"></span>
+  <div style="display:flex;align-items:center;gap:1rem;margin-left:auto">
+    <button class="btn" id="sendEmailBtn" title="Send email to manager or accountant">Send Email</button>
+    <div class="user">
+      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
+      <span id="userName"></span>
+    </div>
   </div>
 </header>
 <script>
@@ -76,7 +80,7 @@
       
     </ul>
     <div class="sidebar-footer">
-      <button class="btn" onclick="localStorage.clear();location.href='HornetHiveLogin.html'">Logout</button>
+      <button class="btn" onclick="logout()">Logout</button>
     </div>
   </aside>
 
@@ -144,6 +148,136 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script src="notify.js"></script>
+
+<!-- Email Modal (ChartOfAccounts page) -->
+<div id="emailModal" class="message-modal" style="display:none;">
+  <div class="message-modal-content">
+    <button type="button" id="closeEmailModal" class="modal-close">&times;</button>
+    <h3>Send Email to Manager or Accountant</h3>
+    <form id="emailForm">
+      <label for="emailTo">Recipient Email</label>
+      <input type="email" id="emailTo" placeholder="user@example.com" required>
+      <label for="emailSubject">Subject</label>
+      <input type="text" id="emailSubject" placeholder="Subject..." required>
+      <label for="emailBody">Message</label>
+      <textarea id="emailBody" rows="6" placeholder="Type your message..." required></textarea>
+      <div class="form-actions">
+        <button type="submit" class="btn">Send Email</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Email handler setup
+  document.addEventListener('DOMContentLoaded', () => {
+    const emailModal = document.getElementById('emailModal');
+    const sendEmailBtn = document.getElementById('sendEmailBtn');
+    const closeEmailModal = document.getElementById('closeEmailModal');
+    const emailForm = document.getElementById('emailForm');
+
+    sendEmailBtn.addEventListener('click', () => {
+      emailModal.style.display = 'block';
+    });
+
+    closeEmailModal.addEventListener('click', () => {
+      emailModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+      if (e.target === emailModal) {
+        emailModal.style.display = 'none';
+      }
+    });
+
+    emailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+      const db = window.supabaseClient || (window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null);
+      
+      if (!db) {
+        alert('❌ Database connection failed.');
+        return;
+      }
+
+      const emailTo = document.getElementById('emailTo').value.trim();
+      const subject = document.getElementById('emailSubject').value.trim();
+      const body = document.getElementById('emailBody').value.trim();
+      const currentUserId = localStorage.getItem('user_id');
+      const currentUsername = localStorage.getItem('username');
+
+      if (!emailTo || !subject || !body)
+        return alert('Please fill in all fields.');
+
+      try {
+        // Find recipient by email
+        const { data: recipient, error: findError } = await db
+          .from('users')
+          .select('id')
+          .eq('email', emailTo)
+          .single();
+
+        if (findError || !recipient) {
+          alert('❌ Recipient email not found in system.');
+          return;
+        }
+
+        // Insert message into internal messaging system
+        const { error: insertError } = await db
+          .from('messages')
+          .insert({
+            sender_id: currentUserId,
+            receiver_id: recipient.id,
+            subject,
+            body
+          });
+
+        if (insertError) {
+          alert('❌ Failed to send message: ' + insertError.message);
+          return;
+        }
+
+        alert('✅ Message sent successfully!');
+        emailForm.reset();
+        emailModal.style.display = 'none';
+      } catch (err) {
+        console.error(err);
+        alert('❌ An error occurred while sending the message.');
+      }
+    });
+
+    // Then load accounts
+    loadAccounts();
+
+    // Filter handlers
+    const $ = id => document.getElementById(id);
+    const run = () => loadAccounts({
+      searchTerm: $('searchInput').value.trim(),
+      type: $('typeFilter').value,
+      acctNumLike: $('numFilter').value.trim(),
+      amtMin: $('amtMin').value,
+      amtMax: $('amtMax').value
+    });
+
+    $('applyFilters').addEventListener('click', run);
+    $('clearFilters').addEventListener('click', () => {
+      ['searchInput','typeFilter','numFilter','amtMin','amtMax'].forEach(id => $(id).value = '');
+      loadAccounts();
+    });
+    $('searchInput').addEventListener('keyup', e => { if (e.key === 'Enter') run(); });
+
+    // Calendar include
+    fetch('Calendar.html').then(r=>r.text()).then(html=>{
+      const container = document.getElementById('calendarContainer');
+      container.innerHTML = html;
+      container.querySelectorAll('script').forEach(s=>{
+        const ns=document.createElement('script'); ns.textContent=s.textContent; document.body.appendChild(ns);
+      });
+    });
+  });
+</script>
+
 <script>
   if (typeof initRBAC === 'function') initRBAC();
   const db = window.supabaseClient;
@@ -221,7 +355,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    loadAccounts();
 
     // Filter handlers
     const $ = id => document.getElementById(id);
@@ -373,3 +506,4 @@
 
 </body>
 </html>
+<script src="sidebarControl.js"></script>

@@ -6,6 +6,20 @@
   <title>HHA Dashboard</title>
   <link rel="stylesheet" href="main.css">
   <link rel="stylesheet" href="messages.css">
+  <style>
+    .status-dot{
+      display:inline-block;
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      margin-left:6px;
+      background:#ccc;
+      vertical-align:middle;
+    }
+    .status-green{ background:#11a633; }
+    .status-yellow{ background:#f0ad18; }
+    .status-red{ background:#d9534f; }
+  </style>
 </head>
 
 <body class="has-sidebar">
@@ -29,7 +43,7 @@
     </div>
 
     <div class="user">
-      <img id="userAvatar" src="profile.png" alt="User">
+      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -62,18 +76,39 @@
       <li><a href="income_statement.html">Income Statement</a></li>
       <li><a href="balance_sheet.html">Balance Sheet</a></li>
       <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
-      
     </ul>
     <div class="sidebar-footer"><button class="btn">Logout</button></div>
   </aside>
 
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
+
+    <!-- ===== SIX RATIO CARDS ===== -->
     <div class="grid">
-      <div class="card"><h4>Account Summary</h4><p></p></div>
-      <div class="card"><h4>Recent Transactions</h4><p></p></div>
-      <div class="card"><h4>Messages</h4><p></p></div>
-      <div class="card"><h4>Reports</h4><p></p></div>
+      <div class="card">
+        <h4>Current Ratio</h4>
+        <p><span id="currentRatioValue">--</span><span id="currentRatioDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Return on Assets</h4>
+        <p><span id="roaValue">--</span><span id="roaDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Return on Equity</h4>
+        <p><span id="roeValue">--</span><span id="roeDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Net Profit Margin</h4>
+        <p><span id="netMarginValue">--</span><span id="netMarginDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Asset Turnover</h4>
+        <p><span id="assetTurnoverValue">--</span><span id="assetTurnoverDot" class="status-dot"></span></p>
+      </div>
+      <div class="card">
+        <h4>Quick Ratio</h4>
+        <p><span id="quickRatioValue">--</span><span id="quickRatioDot" class="status-dot"></span></p>
+      </div>
     </div>
   </main>
 </div>
@@ -94,30 +129,22 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-  // Ensure Accounts link shows for Accountant/Manager even if script load order varies
-  (function(){
-    try {
-      const el = document.getElementById('accountsForAcctMgr');
-      if (!el) return;
-      const role = (localStorage.getItem('role') || '').toLowerCase();
-      if (role === 'accountant' || role === 'manager') el.style.display = 'block';
-      else el.style.display = 'none';
-    } catch(e){}
-  })();
-</script>
-
+<!-- password-expiry check (unchanged) -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase?.createClient
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : window.supabaseClient;
+
+    if (!supabaseClient) return;
 
     const username = localStorage.getItem("username");
     if (!username) return;
@@ -140,6 +167,131 @@
   });
 </script>
 
+<!-- RATIO CALCULATIONS WITH COLOR DOTS (same logic as admin) -->
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+    const db = window.supabaseClient || (window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+
+    if (!db) {
+      console.error("Supabase client not available for ratios.");
+      return;
+    }
+
+    const { data, error } = await db
+      .from("v_account_balances")
+      .select("account_category, account_name, computed_balance");
+
+    if (error) {
+      console.error("Error loading account balances for ratios:", error);
+      return;
+    }
+
+    const totals = {
+      Asset: 0,
+      Liability: 0,
+      Equity: 0,
+      Revenue: 0,
+      Expense: 0
+    };
+    let inventoryTotal = 0;
+
+    data.forEach(row => {
+      const cat = row.account_category;
+      const val = Number(row.computed_balance) || 0;
+
+      if (totals.hasOwnProperty(cat)) {
+        totals[cat] += val;
+      }
+
+      if (cat === "Asset" && typeof row.account_name === "string") {
+        if (row.account_name.toLowerCase().includes("inventory")) {
+          inventoryTotal += val;
+        }
+      }
+    });
+
+    const assets      = totals.Asset;
+    const liabilities = totals.Liability;
+    const equity      = totals.Equity;
+    const revenue     = totals.Revenue;
+    const expenses    = totals.Expense;
+    const netIncome   = revenue - expenses;
+
+    function safeRatio(num, den) {
+      if (!den || !isFinite(den)) return null;
+      return num / den;
+    }
+
+    function formatPercent(value) {
+      if (value === null) return "--";
+      return (value * 100).toFixed(2) + "%";
+    }
+
+    function getStatus(type, value) {
+      if (value === null) return null;
+
+      switch (type) {
+        case "current":
+        case "quick":
+          if (value >= 2) return "green";
+          if (value >= 1) return "yellow";
+          return "red";
+        case "netMargin":
+          if (value >= 0.20) return "green";
+          if (value >= 0.05) return "yellow";
+          return "red";
+        case "roa":
+          if (value >= 0.08) return "green";
+          if (value >= 0.03) return "yellow";
+          return "red";
+        case "roe":
+          if (value >= 0.15) return "green";
+          if (value >= 0.08) return "yellow";
+          return "red";
+        case "assetTurnover":
+          if (value >= 1.0) return "green";
+          if (value >= 0.5) return "yellow";
+          return "red";
+        default:
+          return null;
+      }
+    }
+
+    function setRatio(idBase, value, type) {
+      const valueEl = document.getElementById(idBase + "Value");
+      const dotEl   = document.getElementById(idBase + "Dot");
+      if (!valueEl || !dotEl) return;
+
+      valueEl.textContent = formatPercent(value);
+
+      dotEl.classList.remove("status-green", "status-yellow", "status-red");
+      const status = getStatus(type, value);
+      if (status === "green") dotEl.classList.add("status-green");
+      else if (status === "yellow") dotEl.classList.add("status-yellow");
+      else if (status === "red") dotEl.classList.add("status-red");
+    }
+
+    const currentRatio   = safeRatio(assets, liabilities);
+    const quickRatio     = safeRatio(assets - inventoryTotal, liabilities);
+    const netMargin      = safeRatio(netIncome, revenue);
+    const returnOnAssets = safeRatio(netIncome, assets);
+    const returnOnEquity = safeRatio(netIncome, equity);
+    const assetTurnover  = safeRatio(revenue, assets);
+
+    setRatio("currentRatio",   currentRatio,   "current");
+    setRatio("quickRatio",     quickRatio,     "quick");
+    setRatio("assetTurnover",  assetTurnover,  "assetTurnover");
+    setRatio("netMargin",      netMargin,      "netMargin");
+    setRatio("roa",            returnOnAssets, "roa");
+    setRatio("roe",            returnOnEquity, "roe");
+  });
+</script>
+
 <script>
   document.addEventListener('DOMContentLoaded', () => {
 
@@ -156,19 +308,18 @@
     }
   });
 
-function showNavIfAccountant() {
-  const role = localStorage.getItem("role");
-  console.log("User role:", role);
+  function showNavIfAccountant() {
+    const role = localStorage.getItem("role");
+    console.log("User role:", role);
 
-  if (role === "Accountant") {
-    document.getElementById("accountantNav").style.display = "block";
-  } else {
-    document.getElementById("accountantNav").style.display = "none";
+    if (role === "Accountant") {
+      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "block");
+    } else {
+      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "none");
+    }
   }
-}
 
-showNavIfAccountant();
-
+  showNavIfAccountant();
 </script>
 
 <script src="message.js"></script>
@@ -293,5 +444,6 @@ showNavIfAccountant();
   });
 </script>
 
+<script src="sidebarControl.js"></script>
 </body>
 </html>
