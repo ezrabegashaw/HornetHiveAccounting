@@ -38,7 +38,7 @@
     </script>
 
     <div class="app">
-        <!-- ADMIN SIDEBAR -->
+        <!-- Admin sidebar -->
         <aside class="sidebar">
           <div class="brand">
             <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
@@ -53,7 +53,7 @@
           <div class="sidebar-footer"><button class="btn logoutBtn" id="logoutBtn">Logout</button></div>
         </aside>
  
-        <!-- MANAGER / ACCOUNTANT SIDEBAR -->
+        <!-- Manager or Accountant sidebar -->
         <aside class="sidebar" id="acctMgrSidebar" style="display:none">
           <div class="brand">
             <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
@@ -135,7 +135,7 @@
         </script>
     </div>
 
-    <!-- Email Modal (Accounts page) -->
+    <!-- Email modal (Accounts page) -->
     <div id="emailModal" class="message-modal" style="display:none;">
       <div class="message-modal-content">
         <button type="button" id="closeEmailModal" class="modal-close">&times;</button>
@@ -367,7 +367,7 @@
   });
 </script>
 
-<!-- Role-based sidebar toggle: show acct/mgr sidebar for Manager or Accountant -->
+<!-- Role-based sidebar toggle: sidebar for Manager or Accountant -->
 <script>
   (function(){
     const role = (localStorage.getItem('role') || '').toLowerCase();
@@ -375,13 +375,10 @@
     if (role === 'manager' || role === 'accountant') {
       const mgrSidebar = document.getElementById('acctMgrSidebar');
       if (mgrSidebar) {
-        // remove the inline `display:none` so the CSS `display:flex` applies
         mgrSidebar.style.removeProperty('display');
       }
-      // hide the default admin sidebar (the first sidebar on the page that is not mgrSidebar)
       const sidebars = document.querySelectorAll('aside.sidebar');
       sidebars.forEach(sb => { if (sb.id !== 'acctMgrSidebar') sb.style.display = 'none'; });
-      // show Accounts link under Chart of Accounts for acct/mgr when present
       const acctEntry = document.getElementById('accountsForAcctMgr');
       if (acctEntry) acctEntry.style.display = 'block';
     }

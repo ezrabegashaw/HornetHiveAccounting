@@ -72,7 +72,6 @@
     .indent-1{ padding-left:1.25rem; }
     .indent-2{ padding-left:2.25rem; }
 
-    /* underline helpers: applied only to the number cell */
     .single-underline{
       border-bottom:1px solid #111827;
       padding-bottom:.1rem;
@@ -130,7 +129,6 @@
 
       <table class="bs-table" id="bsTable">
         <tbody>
-        <!-- Filled by JS -->
         </tbody>
       </table>
 
@@ -139,7 +137,6 @@
   </main>
 </div>
 
-<!-- Supabase + auth bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
@@ -217,7 +214,7 @@
       const equip         = map['Office Equipment'] || 0;
       const accDepRaw     = map['Accumulated Depreciation, Equipment'] || 0;
 
-      const accDep        = Math.abs(accDepRaw); // display as positive in "Less:"
+      const accDep        = Math.abs(accDepRaw);
       const totalCurrentAssets =
         cash + ar + preRent + preIns + supplies;
       const netPPE        = equip - accDep;
@@ -239,14 +236,14 @@
 
       const totalLPlusE   = totalLiab + totalEquity;
 
-      // ---- Build rows ----
+      // Build rows
       const rows = [];
 
       // Assets
       rows.push(trLabel('Assets', '', 'section-title'));
       rows.push(trLabel('Current Assets', '', 'sub-title indent-1'));
 
-      // only first asset amount with $
+      // Only first asset amount with $
       rows.push(tr('Cash', '$' + fmt(cash), 'indent-2', 'col-amt'));
       rows.push(tr('Accounts Receivable', fmt(ar), 'indent-2', 'col-amt'));
       rows.push(tr('Prepaid Rent', fmt(preRent), 'indent-2', 'col-amt'));
@@ -282,7 +279,7 @@
       rows.push(trLabel('Liabilities', '', 'sub-title indent-1'));
       rows.push(trLabel('Current Liabilities', '', 'sub-title indent-2'));
 
-      // first liability with $ if you like; keep plain to stay clean
+      // first liability with $
       rows.push(tr('Accounts Payable', fmt(ap), 'indent-3', 'col-amt'));
       rows.push(tr('Salaries Payable', fmt(salPay), 'indent-3', 'col-amt'));
 
@@ -313,7 +310,7 @@
         'col-amt single-underline'
       ));
 
-      // Final total (double underline)
+      // Final total
       rows.push(tr(
         'Total Liabilities & Stockholders\' Equity',
         '$' + fmt(totalLPlusE),
@@ -327,8 +324,6 @@
       const latest = await getLatestJournalDate();
       setPeriodLabel(latest);
 
-      // If for some reason totals don't tie, we just quietly show them;
-      // your underlying data + other pages already confirm they should match.
     }
     catch(err){
       console.error(err);

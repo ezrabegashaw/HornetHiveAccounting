@@ -94,16 +94,14 @@
       border-radius:8px
     }
   
-    /* ✅ RIGHT-ALIGN MONEY COLUMNS SO DIGITS LINE UP */
-  
-    /* Chart of Accounts table – 5th column is Balance */
+    /* Chart of Accounts table */
     .table-wrap table th:nth-child(5),
     .table-wrap table td:nth-child(5){
       text-align:right;
-      font-variant-numeric: tabular-nums; /* nicer lining-up if browser supports it */
+      font-variant-numeric: tabular-nums;
     }
   
-    /* Ledger popup: Debit, Credit, Account Balance are columns 3,4,5 */
+    /* Ledger popup */
     .ledger-table th:nth-child(3),
     .ledger-table td:nth-child(3),
     .ledger-table th:nth-child(4),

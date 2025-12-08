@@ -70,7 +70,6 @@
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
 
-    <!-- ====== SIX RATIO CARDS ====== -->
     <div class="grid">
       <div class="card">
         <h4>Current Ratio</h4>
@@ -122,7 +121,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- Password-expiry warning (unchanged) -->
+<!-- Password-expiry warning -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -154,7 +153,7 @@
   });
 </script>
 
-<!-- Notifications dropdown (unchanged) -->
+<!-- Notifications dropdown -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const bell = document.getElementById('notifBell');
@@ -171,7 +170,7 @@
   });
 </script>
 
-<!-- Email modal (unchanged) -->
+<!-- Email modal -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const emailModal = document.getElementById("emailModal");
@@ -225,7 +224,6 @@
   });
 </script>
 
-<!-- ===== RATIO CALCULATIONS WITH COLOR DOTS ===== -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -285,7 +283,7 @@
       return num / den;
     }
 
-    // Always return a string with a percent sign
+    // Always return string with a percent sign
     function formatPercent(value) {
       if (value === null) return "--";
       return (value * 100).toFixed(2) + "%";
@@ -375,7 +373,7 @@
 
 <script src="message.js"></script>
 
-<!-- ================= Email Modal ================= -->
+<!-- Email Modal -->
 <div id="emailModal" class="message-modal">
   <div class="message-modal-content">
     <button type="button" id="closeEmailModal" class="modal-close">&times;</button>

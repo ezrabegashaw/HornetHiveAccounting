@@ -1,14 +1,11 @@
-// adminChartOfAccounts.js  (REPLACE THE WHOLE FILE WITH THIS)
-
-// Use the Supabase client from auth.js if available; fallback if needed
 let db = window.supabaseClient;
 if (!db && window.supabase) {
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-  const SUPABASE_ANON_KEY = "your-anon-key-here"; // <-- replace if needed
+  const SUPABASE_ANON_KEY = "your-anon-key-here"; 
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// ---------- DOM ----------
+// DOM 
 const addBtn = document.getElementById('addAccountBtn');
 const popup = document.getElementById('popupOverlay');
 const closePopupBtn = document.getElementById('closePopup');
@@ -31,7 +28,7 @@ const amtMax     = document.getElementById('amtMax');
 const applyFilters = document.getElementById('applyFilters');
 const clearFilters = document.getElementById('clearFilters');
 
-// (legacy) ledger popup elements (not used when deep-linking to ledger.html)
+// (legacy) ledger popup elements
 const ledgerPopup = document.getElementById('ledgerPopup');
 const closeLedger = document.getElementById('closeLedger');
 
@@ -43,7 +40,6 @@ function asMoney(n){
 }
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
-// If you don’t have a numeric user id in your app, return null for accounts.user_id (int4)
 async function getNumericUserIdOrNull() { return null; }
 
 async function logEvent(action, before, after) {
@@ -57,7 +53,7 @@ async function logEvent(action, before, after) {
   if (error) console.warn('logEvent failed:', error.message);
 }
 
-// ---------- Load Accounts (Admin) ----------
+// Load Accounts (Admin) 
 export async function loadAccounts(opts = {}) {
   const {
     searchTerm = "",
@@ -119,7 +115,7 @@ export async function loadAccounts(opts = {}) {
   });
 }
 
-// ---------- Deactivate dropdown ----------
+// Deactivate dropdown 
 async function populateDeactivateOptions() {
   const { data, error } = await db.from('accounts')
     .select('account_number, account_name')
@@ -136,7 +132,7 @@ async function populateDeactivateOptions() {
   });
 }
 
-// ---------- Add Account ----------
+// Add Account 
 async function submitAccount(e) {
   e.preventDefault();
 
@@ -190,7 +186,7 @@ async function submitAccount(e) {
   await loadAccounts(currentFilters());
 }
 
-// ---------- Deactivate ----------
+// Deactivate 
 async function submitDeactivate(e) {
   e.preventDefault();
   const acctNum = deactivateSelect.value;
@@ -209,7 +205,7 @@ async function submitDeactivate(e) {
   await loadAccounts(currentFilters());
 }
 
-// ---------- Helpers ----------
+// Helpers 
 function currentFilters() {
   return {
     searchTerm: (searchInput?.value || '').trim(),
@@ -220,7 +216,7 @@ function currentFilters() {
   };
 }
 
-// ---------- Events ----------
+// Events 
 document.addEventListener('DOMContentLoaded', () => {
   loadAccounts();
 
@@ -252,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
   closeDeactivateBtn?.addEventListener('click', () => closeModal(deactivateOverlay));
   deactivateOverlay?.addEventListener('click', (e) => { if (e.target === deactivateOverlay) closeModal(deactivateOverlay); });
 
-  // Legacy popup close (not used now)
   closeLedger?.addEventListener('click', () => closeModal(ledgerPopup));
   ledgerPopup?.addEventListener('click', (e) => { if (e.target === ledgerPopup) closeModal(ledgerPopup); });
 });
