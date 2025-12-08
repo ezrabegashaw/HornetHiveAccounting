@@ -62,18 +62,39 @@
       <li><a href="income_statement.html">Income Statement</a></li>
       <li><a href="balance_sheet.html">Balance Sheet</a></li>
       <li><a href="retained_earnings.html">Statement of Retained Earnings</a></li>
-      
     </ul>
     <div class="sidebar-footer"><button class="btn">Logout</button></div>
   </aside>
 
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
+
+    <!-- ===== SIX RATIO CARDS ===== -->
     <div class="grid">
-      <div class="card"><h4>Account Summary</h4><p></p></div>
-      <div class="card"><h4>Recent Transactions</h4><p></p></div>
-      <div class="card"><h4>Messages</h4><p></p></div>
-      <div class="card"><h4>Reports</h4><p></p></div>
+      <div class="card">
+        <h4>Current Ratio</h4>
+        <p id="currentRatioValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Return on Assets</h4>
+        <p id="roaValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Return on Equity</h4>
+        <p id="roeValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Net Profit Margin</h4>
+        <p id="netMarginValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Asset Turnover</h4>
+        <p id="assetTurnoverValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Quick Ratio</h4>
+        <p id="quickRatioValue">--</p>
+      </div>
     </div>
   </main>
 </div>
@@ -100,24 +121,16 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-  // Ensure Accounts link shows for Accountant/Manager even if script load order varies
-  (function(){
-    try {
-      const el = document.getElementById('accountsForAcctMgr');
-      if (!el) return;
-      const role = (localStorage.getItem('role') || '').toLowerCase();
-      if (role === 'accountant' || role === 'manager') el.style.display = 'block';
-      else el.style.display = 'none';
-    } catch(e){}
-  })();
-</script>
-
+<!-- ===== password expiry check (unchanged) ===== -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase?.createClient
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : window.supabaseClient;
+
+    if (!supabaseClient) return;
 
     const username = localStorage.getItem("username");
     if (!username) return;
@@ -140,6 +153,98 @@
   });
 </script>
 
+<!-- ====== RATIO CALCULATIONS (NEW, same logic as Admin) ====== -->
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+    const db = window.supabaseClient || (window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+
+    if (!db) {
+      console.error("Supabase client not available for ratios.");
+      return;
+    }
+
+    const { data, error } = await db
+      .from("v_account_balances")
+      .select("account_category, account_name, computed_balance");
+
+    if (error) {
+      console.error("Error loading account balances for ratios:", error);
+      return;
+    }
+
+    const totals = {
+      Asset: 0,
+      Liability: 0,
+      Equity: 0,
+      Revenue: 0,
+      Expense: 0
+    };
+
+    let inventoryTotal = 0;
+
+    data.forEach(row => {
+      const cat = row.account_category;
+      const val = Number(row.computed_balance) || 0;
+
+      if (totals.hasOwnProperty(cat)) {
+        totals[cat] += val;
+      }
+
+      if (cat === "Asset" && typeof row.account_name === "string") {
+        if (row.account_name.toLowerCase().includes("inventory")) {
+          inventoryTotal += val;
+        }
+      }
+    });
+
+    const assets      = totals.Asset;
+    const liabilities = totals.Liability;
+    const equity      = totals.Equity;
+    const revenue     = totals.Revenue;
+    const expenses    = totals.Expense;
+    const netIncome   = revenue - expenses;
+
+    function safeRatio(num, den) {
+      if (!den || !isFinite(den)) return null;
+      return num / den;
+    }
+
+    function formatNumber(value) {
+      if (value === null) return "--";
+      return value.toFixed(2);
+    }
+
+    function formatPercent(value) {
+      if (value === null) return "--";
+      return (value * 100).toFixed(2) + "%";
+    }
+
+    const currentRatio   = safeRatio(assets, liabilities);
+    const quickRatio     = safeRatio(assets - inventoryTotal, liabilities);
+    const netMargin      = safeRatio(netIncome, revenue);
+    const returnOnAssets = safeRatio(netIncome, assets);
+    const returnOnEquity = safeRatio(netIncome, equity);
+    const assetTurnover  = safeRatio(revenue, assets);
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    setText("currentRatioValue",   formatNumber(currentRatio));
+    setText("quickRatioValue",     formatNumber(quickRatio));
+    setText("assetTurnoverValue",  formatNumber(assetTurnover));
+    setText("netMarginValue",      formatPercent(netMargin));
+    setText("roaValue",            formatPercent(returnOnAssets));
+    setText("roeValue",            formatPercent(returnOnEquity));
+  });
+</script>
+
 <script>
   document.addEventListener('DOMContentLoaded', () => {
 
@@ -156,19 +261,18 @@
     }
   });
 
-function showNavIfAccountant() {
-  const role = localStorage.getItem("role");
-  console.log("User role:", role);
+  function showNavIfAccountant() {
+    const role = localStorage.getItem("role");
+    console.log("User role:", role);
 
-  if (role === "Accountant") {
-    document.getElementById("accountantNav").style.display = "block";
-  } else {
-    document.getElementById("accountantNav").style.display = "none";
+    if (role === "Accountant") {
+      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "block");
+    } else {
+      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "none");
+    }
   }
-}
 
-showNavIfAccountant();
-
+  showNavIfAccountant();
 </script>
 
 <script src="message.js"></script>
@@ -276,7 +380,6 @@ showNavIfAccountant();
       <h3>Users</h3>
       <p>Administrators and staff who have access to the system. Permissions determine who may view, edit, or approve entries.</p>
     </div>
-
   </div>
 </div>
 

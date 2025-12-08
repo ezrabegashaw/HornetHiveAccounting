@@ -66,11 +66,33 @@
 
   <main class="main">
     <div class="header"><h1>Dashboard</h1></div>
+
+    <!-- ====== SIX RATIO CARDS ====== -->
     <div class="grid">
-      <div class="card"><h4>Current Ratio</h4><p></p></div>
-      <div class="card"><h4>Return on Assets</h4><p></p></div>
-      <div class="card"><h4>Return on Equity</h4><p></p></div>
-      <div class="card"><h4>Net Profit Margin</h4><p></p></div>
+      <div class="card">
+        <h4>Current Ratio</h4>
+        <p id="currentRatioValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Return on Assets</h4>
+        <p id="roaValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Return on Equity</h4>
+        <p id="roeValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Net Profit Margin</h4>
+        <p id="netMarginValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Asset Turnover</h4>
+        <p id="assetTurnoverValue">--</p>
+      </div>
+      <div class="card">
+        <h4>Quick Ratio</h4>
+        <p id="quickRatioValue">--</p>
+      </div>
     </div>
   </main>
 </div>
@@ -97,11 +119,16 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<!-- ===== Password expiry warning (unchanged) ===== -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase?.createClient
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : window.supabaseClient;
+
+    if (!supabaseClient) return;
 
     const username = localStorage.getItem("username");
     if (!username) return;
@@ -124,6 +151,7 @@
   });
 </script>
 
+<!-- ===== NOTIFICATIONS DROPDOWN (unchanged) ===== -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const bell = document.getElementById('notifBell');
@@ -140,6 +168,7 @@
   });
 </script>
 
+<!-- ===== EMAIL MODAL (unchanged) ===== -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const emailModal = document.getElementById("emailModal");
@@ -193,16 +222,113 @@
   });
 </script>
 
+<!-- ====== RATIO CALCULATIONS (NEW) ====== -->
 <script>
-    // Logout functionality
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Try to reuse global client from auth.js; if not present, create one.
+    const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+
+    const db = window.supabaseClient || (window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+
+    if (!db) {
+      console.error("Supabase client not available for ratios.");
+      return;
+    }
+
+    // Pull all account balances (category + balance + name for inventory)
+    const { data, error } = await db
+      .from("v_account_balances")
+      .select("account_category, account_name, computed_balance");
+
+    if (error) {
+      console.error("Error loading account balances for ratios:", error);
+      return;
+    }
+
+    const totals = {
+      Asset: 0,
+      Liability: 0,
+      Equity: 0,
+      Revenue: 0,
+      Expense: 0
+    };
+
+    let inventoryTotal = 0;
+
+    data.forEach(row => {
+      const cat = row.account_category;
+      const val = Number(row.computed_balance) || 0;
+
+      if (totals.hasOwnProperty(cat)) {
+        totals[cat] += val;
+      }
+
+      // Treat any Asset account with "inventory" in the name as inventory
+      if (cat === "Asset" && typeof row.account_name === "string") {
+        if (row.account_name.toLowerCase().includes("inventory")) {
+          inventoryTotal += val;
+        }
+      }
+    });
+
+    const assets     = totals.Asset;
+    const liabilities = totals.Liability;
+    const equity     = totals.Equity;
+    const revenue    = totals.Revenue;
+    const expenses   = totals.Expense;
+    const netIncome  = revenue - expenses;
+
+    function safeRatio(num, den) {
+      if (!den || !isFinite(den)) return null;
+      return num / den;
+    }
+
+    function formatNumber(value) {
+      if (value === null) return "--";
+      return value.toFixed(2);
+    }
+
+    function formatPercent(value) {
+      if (value === null) return "--";
+      return (value * 100).toFixed(2) + "%";
+    }
+
+    // Ratios
+    const currentRatio   = safeRatio(assets, liabilities);
+    const quickRatio     = safeRatio(assets - inventoryTotal, liabilities);
+    const netMargin      = safeRatio(netIncome, revenue);
+    const returnOnAssets = safeRatio(netIncome, assets);
+    const returnOnEquity = safeRatio(netIncome, equity);
+    const assetTurnover  = safeRatio(revenue, assets);
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    // Fill the cards
+    setText("currentRatioValue",   formatNumber(currentRatio));   // e.g. 1.50
+    setText("quickRatioValue",     formatNumber(quickRatio));     // e.g. 1.20
+    setText("assetTurnoverValue",  formatNumber(assetTurnover));  // e.g. 0.85
+    setText("netMarginValue",      formatPercent(netMargin));     // e.g. 12.34%
+    setText("roaValue",            formatPercent(returnOnAssets));
+    setText("roeValue",            formatPercent(returnOnEquity));
+  });
+</script>
+
+<script>
+  // Logout functionality
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    try { 
-      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut(); 
+    try {
+      if (window.supabaseClient?.auth) await window.supabaseClient.auth.signOut();
     } catch(e){}
     localStorage.removeItem('username');
     localStorage.removeItem('first_name');
     location.href = 'HornetHiveLogin.html';
-   });
+  });
 </script>
 
 <script src="message.js"></script>
@@ -271,7 +397,6 @@
   .help-topic { margin-bottom: 1.2rem; }
   .help-topic h3 { margin-bottom: 0.4rem; color: #0a58ca; }
 </style>
-
 
 <button id="helpBtn">Help</button>
 
