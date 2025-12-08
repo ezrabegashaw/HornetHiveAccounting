@@ -27,7 +27,7 @@
 <header class="topbar">
   <div class="datetime" id="dateTime"></div>
 
-  <div class="topbar-right">
+    <div class="topbar-right">
     <button class="btn" id="sendEmailBtn" title="Send an email to a user">Send Email</button>
 
     <div class="notification-wrapper">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="user">
-      <img id="userAvatar" src="profile.png" alt="User">
+      <img id="userAvatar" src="HHAlogo.jpg" alt="User">
       <span id="userName"></span>
     </div>
   </div>
@@ -127,11 +127,11 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- Password-expiry warning (unchanged) -->
 <script>
@@ -531,3 +531,4 @@
 
 </body>
 </html>
+<script src="sidebarControl.js"></script>

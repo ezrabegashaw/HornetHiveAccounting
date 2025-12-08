@@ -15,7 +15,7 @@
         <div style="display:flex;align-items:center;gap:1rem;margin-left:auto">
             <button class="btn" id="sendEmailBtn" title="Send email to manager or administrator">Send Email</button>
             <div class="user">
-                <img id="userAvatar" src="profile.png" alt="User">
+                <img id="userAvatar" src="HHAlogo.jpg" alt="User">
                 <span id="userName"></span>
             </div>
         </div>
@@ -44,7 +44,7 @@
             <img src="HHAlogo.jpg" alt="HHA Logo"><span>HHA</span>
           </div>
           <ul class="nav">
-            <li><a href="AdminDashboard.html">Dashboard</a></li>
+            <li><a href="AdminDashBoard.html">Dashboard</a></li>
             <li><a href="AdminChartOfAccounts.html">Chart of Accounts</a></li>
             <li><a href="Accounts.html" aria-current="page">Accounts</a></li>
             <li><a href="Users.html">Users</a></li>
@@ -384,24 +384,7 @@
 </script>
 
 <!-- Role-based sidebar toggle: show acct/mgr sidebar for Manager or Accountant -->
-<script>
-  (function(){
-    const role = (localStorage.getItem('role') || '').toLowerCase();
-    if (!role) return;
-    if (role === 'manager' || role === 'accountant') {
-      const mgrSidebar = document.getElementById('acctMgrSidebar');
-      if (mgrSidebar) {
-        // remove the inline `display:none` so the CSS `display:flex` applies
-        mgrSidebar.style.removeProperty('display');
-      }
-      // hide the default admin sidebar (the first sidebar on the page that is not mgrSidebar)
-      const sidebars = document.querySelectorAll('aside.sidebar');
-      sidebars.forEach(sb => { if (sb.id !== 'acctMgrSidebar') sb.style.display = 'none'; });
-      // show Accounts link under Chart of Accounts for acct/mgr when present
-      const acctEntry = document.getElementById('accountsForAcctMgr');
-      if (acctEntry) acctEntry.style.display = 'block';
-    }
-  })();
-</script>
-</body>
+  </body>
+
+  <script src="sidebarControl.js"></script>
 </html>
