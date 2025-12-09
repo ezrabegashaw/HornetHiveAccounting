@@ -7,8 +7,6 @@ const path = require('path');
 
 const SALT_ROUNDS = 12;
 const app = express();
-
-// Render/Heroku/etc. require PORT from env
 const PORT = process.env.PORT || 3333;
 
 /*
@@ -34,30 +32,18 @@ app.use((req, _res, next) => {
 //
 // STATIC HOSTING FOR YOUR FRONTEND
 //
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Homepage
-app.get("/", (req, res) => {
- res.sendFile(path.resolve(__dirname, "public", "HornetHiveLogin.html"));
+// Homepage route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'HornetHiveLogin.html'));
 });
 
-// Favicon route to prevent 404 spam
-app.get("/favicon.ico", (req, res) => {
-  const faviconPath = path.join(__dirname, "favicon.ico");
-  res.sendFile(faviconPath, err => {
-    if (err) res.status(404).end();
-  });
-});
-
-//
 // Supabase Clients
-//
 const supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const supabaseAdmin  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-//
 // Mailer
-//
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
@@ -68,13 +54,10 @@ app.get('/health', (_req, res) => res.json({ ok: true, time: new Date().toISOStr
 
 /* 
    All primary API routes under /api/*
+   Copy all your existing /api routes here
 */
-// --- Keep all your API routes here unchanged ---
-// For brevity, I'm not repeating all of them, but copy your existing routes exactly.
 
-//
 // Shim routes for convenience
-//
 const shim = (from, to, method = 'post') => {
   app[method](from, (req, res) => { req.url = to; app._router.handle(req, res); });
 };
