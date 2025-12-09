@@ -23,7 +23,8 @@
     "supabase",
     "express",
     "accounting",
-    "hornethive"
+    "hornethive",
+    "nodejs"
   ],
   "author": "",
   "license": "ISC",
