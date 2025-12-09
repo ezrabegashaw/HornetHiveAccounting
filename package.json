@@ -8,8 +8,8 @@
     "start": "node server.js",
     "start:prod": "NODE_ENV=production node server.js",
     "dev": "nodemon --watch . --ext js,json --delay 300ms server.js",
-    "build": "cd client && npm ci && npm run build || echo \"no client to build\"",
-    "postinstall": "cd client && npm ci && npm run build || echo \"no client to build (postinstall)\"",
+    "build": "node ./scripts/ensure-client-build.js",
+    "postinstall": "node ./scripts/ensure-client-build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
