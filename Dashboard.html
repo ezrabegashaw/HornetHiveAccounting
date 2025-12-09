@@ -28,20 +28,6 @@
   <div class="datetime" id="dateTime"></div>
 
   <div class="topbar-right">
-
-    <div class="notification-wrapper">
-      <button id="notifBell" class="notif-bell" title="Messages">
-        <img src="icons8-bell-24.png" alt="Notifications">
-        <span id="notifBadge" class="notif-badge">0</span>
-      </button>
-      <div id="notifDropdown" class="notif-dropdown">
-        <div class="notif-header">Messages</div>
-        <ul id="notifList" class="notif-list">
-          <li class="notif-empty">No notifications</li>
-        </ul>
-      </div>
-    </div>
-
     <div class="user">
       <img id="userAvatar" src="profile.png" alt="User">
       <span id="userName"></span>
@@ -55,8 +41,10 @@
   if (el) el.textContent = name;
   function updateClock() {
     const now = new Date();
-    const options = { weekday:'short', year:'numeric', month:'short', day:'numeric',
-                      hour:'2-digit', minute:'2-digit', second:'2-digit' };
+    const options = {
+      weekday:'short', year:'numeric', month:'short', day:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    };
     document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
   }
   updateClock(); setInterval(updateClock,1000);
@@ -114,20 +102,19 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
   if (typeof initRBAC === 'function') initRBAC();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- Password-expiry check -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
-    const supabaseClient = window.supabase?.createClient
+    const supabaseClient = window.supabaseClient || (window.supabase?.createClient
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-      : window.supabaseClient;
+      : null);
 
     if (!supabaseClient) return;
 
@@ -152,7 +139,6 @@
   });
 </script>
 
-<!-- RATIO CALCULATIONS WITH COLOR DOTS (same logic as admin) -->
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -278,35 +264,25 @@
 </script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-
-    const bell = document.getElementById('notifBell');
-    const dropdown = document.getElementById('notifDropdown');
-    if (bell && dropdown) {
-      bell.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-      });
-      document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target) && !bell.contains(e.target)) dropdown.style.display = 'none';
-      });
-    }
-  });
-
   function showNavIfAccountant() {
     const role = localStorage.getItem("role");
     console.log("User role:", role);
 
+    const nav = document.getElementById("accountantNav");
+    if (!nav || !nav.style) return;
+
     if (role === "Accountant") {
-      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "block");
+      nav.style.display = "block";
     } else {
-      document.getElementById("accountantNav")?.style && (document.getElementById("accountantNav").style.display = "none");
+      nav.style.display = "none";
     }
   }
 
   showNavIfAccountant();
 </script>
 
+<!-- Manager notifications + messaging -->
+<script src="notify.js"></script>
 <script src="message.js"></script>
 
 <style>

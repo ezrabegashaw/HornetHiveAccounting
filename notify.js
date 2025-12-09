@@ -29,7 +29,7 @@
         console.warn('[notify.js] Unable to read users.role', e);
       }
   
-      if (role !== 'manager') return;
+      if (role !== 'manager' && role !== 'accountant') return;
   
       // Inject styles
       injectStyles(`
