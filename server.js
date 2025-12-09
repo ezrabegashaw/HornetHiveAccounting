@@ -38,7 +38,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Homepage
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "HornetHiveLogin.html"));
+ res.sendFile(path.join(__dirname, "public", "HornetHiveLogin.html"));
 });
 
 // Favicon route to prevent 404 spam
