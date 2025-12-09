@@ -25,6 +25,17 @@ app.use((req, res, next) => {
 // JSON body parsing 
 app.use(express.json());
 
+const path = require("path");
+
+// Serve static files (HTML, CSS, JS) from the root folder
+app.use(express.static(__dirname));
+
+// Entry point: serve HornetHiveLogin.html when hitting /
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "HornetHiveLogin.html"));
+});
+
+
 // Simple request logger
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
