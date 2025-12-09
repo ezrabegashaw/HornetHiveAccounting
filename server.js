@@ -163,7 +163,7 @@ shim('/reject', '/api/reject', 'get');
    404 CATCH-ALL
 -------------------------------*/
 app.use((req, res) => {
-  console.warn("No route matched ${req.method} ${req.originalUrl}`);
+  console.warn(`No route matched ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: "Route not found" });
 });
 
