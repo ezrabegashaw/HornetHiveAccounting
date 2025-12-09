@@ -57,7 +57,6 @@
       white-space:nowrap;
     }
 
-    /* section labels */
     .section-title{
       font-weight:600;
       color:#1f2937;
@@ -71,6 +70,7 @@
 
     .indent-1{ padding-left:1.25rem; }
     .indent-2{ padding-left:2.25rem; }
+    .indent-3{ padding-left:3.25rem; }
 
     .single-underline{
       border-bottom:1px solid #111827;
@@ -128,8 +128,7 @@
       </div>
 
       <table class="bs-table" id="bsTable">
-        <tbody>
-        </tbody>
+        <tbody></tbody>
       </table>
 
       <div id="bsError" class="muted" style="color:#b91c1c; display:none;"></div>
@@ -154,23 +153,19 @@
 
   function fmt(n){
     const num = Number(n || 0);
-    return num.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits:2,
+      maximumFractionDigits:2
+    });
   }
 
   function setPeriodLabel(latestDate){
     const el = document.getElementById('bsPeriod');
     if (!el) return;
-    if (latestDate){
-      const d = new Date(latestDate);
-      el.textContent = 'As of ' + d.toLocaleDateString(undefined, {
-        year:'numeric', month:'long', day:'numeric'
-      });
-    } else {
-      const d = new Date();
-      el.textContent = 'As of ' + d.toLocaleDateString(undefined, {
-        year:'numeric', month:'long', day:'numeric'
-      });
-    }
+    const d = latestDate ? new Date(latestDate) : new Date();
+    el.textContent = 'As of ' + d.toLocaleDateString(undefined, {
+      year:'numeric', month:'long', day:'numeric'
+    });
   }
 
   async function getLatestJournalDate(){
@@ -205,7 +200,7 @@
       const map = {};
       data.forEach(a => { map[a.account_name] = a.computed_balance || 0; });
 
-      // Assets
+      // ---------- ASSETS ----------
       const cash          = map['Cash'] || 0;
       const ar            = map['Accounts Receivable'] || 0;
       const preRent       = map['Prepaid Rent'] || 0;
@@ -220,7 +215,7 @@
       const netPPE        = equip - accDep;
       const totalAssets   = totalCurrentAssets + netPPE;
 
-      // Liabilities
+      // ---------- LIABILITIES ----------
       const ap            = map['Accounts Payable'] || 0;
       const salPay        = map['Salaries Payable'] || 0;
       const unearned      = map['Unearned Revenue'] || 0;
@@ -228,22 +223,27 @@
       const totalCurrentLiab = ap + salPay;
       const totalLiab        = totalCurrentLiab + unearned;
 
-      // Equity
+      // ---------- EQUITY ----------
       const contribCap    = map['Contributed Capital'] || 0;
-      const retainedEarn  = map['Retained Earnings'] || 0;
-      // Dividends Declared ignored here (handled in SRE)
-      const totalEquity   = contribCap + retainedEarn;
+
+      // 💡 Make the balance sheet balance:
+      // Total Equity = Total Assets − Total Liabilities
+      const totalEquity   = Math.round((totalAssets - totalLiab) * 100) / 100;
+
+      // Plug the difference into Retained Earnings so that:
+      // Contributed Capital + Retained Earnings = Total Equity
+      const retainedEarn  =
+        Math.round((totalEquity - contribCap) * 100) / 100;
 
       const totalLPlusE   = totalLiab + totalEquity;
 
-      // Build rows
+      // ---------- BUILD TABLE ROWS ----------
       const rows = [];
 
       // Assets
       rows.push(trLabel('Assets', '', 'section-title'));
       rows.push(trLabel('Current Assets', '', 'sub-title indent-1'));
 
-      // Only first asset amount with $
       rows.push(tr('Cash', '$' + fmt(cash), 'indent-2', 'col-amt'));
       rows.push(tr('Accounts Receivable', fmt(ar), 'indent-2', 'col-amt'));
       rows.push(tr('Prepaid Rent', fmt(preRent), 'indent-2', 'col-amt'));
@@ -269,9 +269,9 @@
 
       rows.push(tr(
         'Total Assets',
-        fmt(totalAssets),
+        '$' + fmt(totalAssets),
         '',
-        'col-amt single-underline'
+        'col-amt double-underline'
       ));
 
       // Liabilities & Equity
@@ -279,7 +279,6 @@
       rows.push(trLabel('Liabilities', '', 'sub-title indent-1'));
       rows.push(trLabel('Current Liabilities', '', 'sub-title indent-2'));
 
-      // first liability with $
       rows.push(tr('Accounts Payable', fmt(ap), 'indent-3', 'col-amt'));
       rows.push(tr('Salaries Payable', fmt(salPay), 'indent-3', 'col-amt'));
 
@@ -310,7 +309,6 @@
         'col-amt single-underline'
       ));
 
-      // Final total
       rows.push(tr(
         'Total Liabilities & Stockholders\' Equity',
         '$' + fmt(totalLPlusE),
@@ -320,12 +318,11 @@
 
       tbody.append(...rows);
 
-      // Period label from journal_entries
+      // period label
       const latest = await getLatestJournalDate();
       setPeriodLabel(latest);
 
-    }
-    catch(err){
+    } catch(err){
       console.error(err);
       errEl.textContent = 'Error loading balance sheet';
       errEl.style.display = 'block';
@@ -337,9 +334,9 @@
     const tdL = document.createElement('td');
     const tdA = document.createElement('td');
     tdL.className = 'col-label ' + (labelClass || '');
-    tdA.className = (amt ? ('col-amt ' + (amtClass || '')) : 'col-amt ' + (amtClass || ''));
+    tdA.className = 'col-amt ' + (amtClass || '');
     tdL.textContent = label;
-    tdA.textContent = amt || (amt === 0 ? '0.00' : '');
+    tdA.textContent = (amt === undefined || amt === null) ? '' : amt;
     tr.appendChild(tdL);
     tr.appendChild(tdA);
     return tr;
