@@ -3,17 +3,17 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
+const path = require('path');
 
 const SALT_ROUNDS = 12;
 const app = express();
-// Force a dev port that isn't in use:
-const PORT = 3333;
+
+// Render/Heroku/etc. require PORT from env
+const PORT = process.env.PORT || 3333;
 
 /*
    ULTRA-PERMISSIVE CORS for local dev (no cookies used)
-   - Always sets Access-Control-Allow-Origin: *
-   - Answers all OPTIONS preflights with 204
-   */
+*/
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -25,28 +25,30 @@ app.use((req, res, next) => {
 // JSON body parsing 
 app.use(express.json());
 
-const path = require("path");
-
-// Serve static files (HTML, CSS, JS) from the root folder
-app.use(express.static(__dirname));
-
-// Entry point: serve HornetHiveLogin.html when hitting /
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "HornetHiveLogin.html"));
-});
-
-
 // Simple request logger
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
+//
+// ⭐ STATIC HOSTING FOR YOUR FRONTEND ⭐
+//
+app.use(express.static(__dirname));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "HornetHiveLogin.html"));
+});
+
+//
 // Supabase Clients
+//
 const supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const supabaseAdmin  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+//
 // Mailer
+//
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
@@ -56,7 +58,7 @@ const transporter = nodemailer.createTransport({
 app.get('/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 /* 
-   All primary routes live under /api/*    
+   All primary API routes under /api/*
 */
 
 // Signup
@@ -71,7 +73,8 @@ app.post('/api/signup', async (req, res) => {
 
     const now = new Date();
     const password_fresh = now.toISOString();
-    const password_expire = new Date(now); password_expire.setMonth(password_expire.getMonth() + 3);
+    const password_expire = new Date(now);
+    password_expire.setMonth(password_expire.getMonth() + 3);
 
     const { error } = await supabaseAdmin.from('users').insert([{
       ...user,
@@ -81,6 +84,7 @@ app.post('/api/signup', async (req, res) => {
       password_fresh,
       password_expire: password_expire.toISOString()
     }]);
+
     if (error) throw error;
 
     const approveLink = `http://localhost:${PORT}/api/approve?email=${encodeURIComponent(user.email)}`;
@@ -100,7 +104,7 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// Approve / Reject 
+// Approve 
 app.get('/api/approve', async (req, res) => {
   const email = req.query.email;
   try {
@@ -112,7 +116,7 @@ app.get('/api/approve', async (req, res) => {
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Your HornetHive account is approved!',
-      text: 'You can now log in at http://127.0.0.1:5500/HornetHiveLogin.html'
+      text: 'You can now log in at your deployed Render website URL.'
     });
 
     res.send('User approved and notified!');
@@ -122,6 +126,7 @@ app.get('/api/approve', async (req, res) => {
   }
 });
 
+// Reject 
 app.get('/api/reject', async (req, res) => {
   const email = req.query.email;
   try {
@@ -143,6 +148,7 @@ app.get('/api/reject', async (req, res) => {
 app.post("/api/send-email", async (req, res) => {
   const { to, subject, message } = req.body;
   if (!to || !subject || !message) return res.status(400).json({ error: "Recipient, subject, and message are required." });
+
   try {
     const { data: user, error: userError } = await supabaseAdmin.from("users").select("email").eq("email", to).single();
     if (userError || !user) return res.status(404).json({ error: "No user found with that email." });
@@ -155,6 +161,7 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 
+// Raw email
 app.post("/api/send-email-raw", async (req, res) => {
   const { emailTo, subject, body } = req.body;
   if (!emailTo || !subject || !body) return res.status(400).json({ error: "Missing fields" });
@@ -179,6 +186,7 @@ app.post("/api/update-password", async (req, res) => {
     const { data: user, error: fetchError } = await supabaseAdmin
       .from("users").select("password, old_password_plain, old_passwords")
       .eq("email", email).eq("username", username).single();
+
     if (fetchError) throw fetchError;
     if (!user) return res.status(404).json({ message: "No matching user found." });
 
@@ -190,6 +198,7 @@ app.post("/api/update-password", async (req, res) => {
     const { error: updateError } = await supabaseAdmin
       .from("users").update({ password: hashed, old_password_plain: newPassword, old_passwords: history })
       .eq("email", email).eq("username", username);
+
     if (updateError) throw updateError;
 
     res.json({ message: "Password updated successfully!" });
@@ -199,12 +208,11 @@ app.post("/api/update-password", async (req, res) => {
   }
 });
 
-// Login / Lock 
+// Login
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // CASE-INSENSITIVE lookup
     const { data: user, error } = await supabaseAdmin
       .from("users")
       .select("*")
@@ -218,32 +226,26 @@ app.post("/api/login", async (req, res) => {
       return res.status(403).json({ error: "Account awaiting approval" });
     }
 
-    // PASSWORD CHECK with migration for legacy plaintext
+    // PASSWORD CHECK
     const stored = user.password_hash || user.password || "";
     const looksHashed = typeof stored === "string" && stored.startsWith("$2");
 
     let valid = false;
 
     if (looksHashed) {
-      // Normal path: compare against bcrypt hash
       valid = await bcrypt.compare(password, stored);
     } else {
-      // Legacy path: stored plaintext — compare once, then migrate to bcrypt
+      // Legacy plaintext path
       valid = stored === password;
       if (valid) {
-        try {
-          const newHash = await bcrypt.hash(password, SALT_ROUNDS);
-          const { error: upErr } = await supabaseAdmin
-            .from("users")
-            .update({
-              password: newHash,       
-              old_password_plain: null 
-            })
-            .eq("id", user.id);
-          if (upErr) console.warn("Password migration update failed:", upErr);
-        } catch (mErr) {
-          console.warn("Password migration error:", mErr);
-        }
+        const newHash = await bcrypt.hash(password, SALT_ROUNDS);
+        await supabaseAdmin
+          .from("users")
+          .update({
+            password: newHash,       
+            old_password_plain: null 
+          })
+          .eq("id", user.id);
       }
     }
 
@@ -251,7 +253,6 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // Success: strip sensitive fields
     const { password: _p, password_hash: _ph, old_password_plain: _opp, ...safeUser } = user;
     res.json({ user: safeUser });
 
@@ -261,6 +262,7 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Lock account
 app.post("/api/lock-account", async (req, res) => {
   const { username } = req.body;
   try {
@@ -273,6 +275,10 @@ app.post("/api/lock-account", async (req, res) => {
   }
 });
 
+
+//
+// Shim routes for convenience
+//
 const shim = (from, to, method = 'post') => {
   app[method](from, (req, res) => { req.url = to; app._router.handle(req, res); });
 };
@@ -289,7 +295,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start 
+// Start server
 app.listen(PORT, () => {
   console.log(`HornetHive backend running on port ${PORT}`);
 });
