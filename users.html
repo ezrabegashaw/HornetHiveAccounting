@@ -198,7 +198,7 @@
       return;
     }
 
-    usersCache = data || []; // keep cache if you want to support local filtering after server call
+    usersCache = data || [];
     renderUsers(usersCache);
   }
 
@@ -243,7 +243,6 @@
     });
   }
 
-  // Debounce helper and search wiring (server-side search)
   function debounce(fn, wait = 300) {
     let t;
     return (...args) => {
@@ -392,7 +391,7 @@
     document.getElementById('popupOverlay').style.display = 'block';
     document.getElementById('pendingPopup').style.display = 'block';
 
-    //Prints users onto the table
+    // Prints users onto the table
     const tableBody = document.getElementById('pendingTable').getElementsByTagName('tbody')[0];
     tableBody.innerHTML = ''; // Clear existing rows
 
@@ -498,7 +497,7 @@
       first_name: first,
       last_name: last,
       email: email,
-      username: username, // server still ensures uniqueness
+      username: username,
       address: address,
       dob: dob,
       role: role,
@@ -519,7 +518,7 @@
     }
 
     try {
-      const { error } = await signupUser(data); // from auth.js
+      const { error } = await signupUser(data); // From auth.js
       if(error) {
         alert("Signup failed: " + (error.message || JSON.stringify(error)));
         return;

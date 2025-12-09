@@ -1,6 +1,3 @@
-// adminChartOfAccounts.js  (REPLACE THE WHOLE FILE WITH THIS)
-
-// Use the Supabase client from auth.js if available; fallback if needed
 let db = window.supabaseClient;
 if (!db && window.supabase) {
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
@@ -13,6 +10,12 @@ const addBtn = document.getElementById('addAccountBtn');
 const popup = document.getElementById('popupOverlay');
 const closePopupBtn = document.getElementById('closePopup');
 const form = document.getElementById('accountForm');
+
+const editBtn = document.getElementById('editAccountBtn');
+const editOverlay = document.getElementById('editPopupOverlay');
+const closeEditBtn = document.getElementById('closeEditPopup');
+const editForm = document.getElementById('editAccountForm');
+const editSelect = document.getElementById('editAccountSelect');
 
 const deactivateBtn = document.getElementById('deactivateAccountBtn');
 const deactivateOverlay = document.getElementById('deactivatePopupOverlay');
@@ -31,9 +34,12 @@ const amtMax     = document.getElementById('amtMax');
 const applyFilters = document.getElementById('applyFilters');
 const clearFilters = document.getElementById('clearFilters');
 
-// (legacy) ledger popup elements (not used when deep-linking to ledger.html)
+// (legacy) ledger popup elements
 const ledgerPopup = document.getElementById('ledgerPopup');
 const closeLedger = document.getElementById('closeLedger');
+
+// cache for edit popup
+let editAccountsCache = [];
 
 function openModal(el){ el?.classList.add('show'); }
 function closeModal(el){ el?.classList.remove('show'); }
@@ -43,7 +49,6 @@ function asMoney(n){
 }
 function isDigitsOnly(s){ return /^[0-9]+$/.test(String(s || '')); }
 
-// If you don’t have a numeric user id in your app, return null for accounts.user_id (int4)
 async function getNumericUserIdOrNull() { return null; }
 
 async function logEvent(action, before, after) {
@@ -136,7 +141,7 @@ async function populateDeactivateOptions() {
   });
 }
 
-// ---------- Add Account ----------
+// Add Account 
 async function submitAccount(e) {
   e.preventDefault();
 
@@ -190,7 +195,116 @@ async function submitAccount(e) {
   await loadAccounts(currentFilters());
 }
 
-// ---------- Deactivate ----------
+async function populateEditOptions() {
+  const { data, error } = await db.from('accounts')
+    .select('*')
+    .eq('is_active', true)
+    .order('account_number');
+
+  editAccountsCache = data || [];
+  editSelect.innerHTML = '<option value="">-- Select an Account --</option>';
+
+  if (error) {
+    console.error('Error loading accounts for edit:', error.message);
+    return;
+  }
+
+  editAccountsCache.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.account_id;       // assume account_id is primary key
+    opt.textContent = `${a.account_number} — ${a.account_name}`;
+    editSelect.appendChild(opt);
+  });
+}
+
+function fillEditForm(accountId) {
+  const acc = editAccountsCache.find(a => String(a.account_id) === String(accountId));
+  if (!acc) return;
+
+  document.getElementById('edit_account_name').value        = acc.account_name || '';
+  document.getElementById('edit_account_number').value      = acc.account_number || '';
+  document.getElementById('edit_normal_side').value         = acc.normal_side || '';
+  document.getElementById('edit_account_category').value    = acc.account_category || '';
+  document.getElementById('edit_account_subcategory').value = acc.account_subcategory || '';
+  document.getElementById('edit_initial_balance').value     = acc.initial_balance ?? 0;
+  document.getElementById('edit_account_order').value       = acc.account_order || '';
+  document.getElementById('edit_statement_type').value      = acc.statement_type || '';
+  document.getElementById('edit_account_description').value = acc.account_description || '';
+  document.getElementById('edit_comment').value             = acc.comment || '';
+}
+
+async function submitEditAccount(e) {
+  e.preventDefault();
+  const accountId = editSelect.value;
+  if (!accountId) {
+    alert('Please select an account to edit.');
+    return;
+  }
+
+  const updated = {
+    account_name: document.getElementById('edit_account_name').value.trim(),
+    account_number: document.getElementById('edit_account_number').value.trim(),
+    normal_side: document.getElementById('edit_normal_side').value,
+    account_category: document.getElementById('edit_account_category').value.trim(),
+    account_subcategory: (document.getElementById('edit_account_subcategory').value.trim() || null),
+    initial_balance: Number(document.getElementById('edit_initial_balance').value || 0),
+    account_order: (document.getElementById('edit_account_order').value.trim() || null),
+    statement_type: document.getElementById('edit_statement_type').value,
+    account_description: (document.getElementById('edit_account_description').value.trim() || null),
+    comment: (document.getElementById('edit_comment').value.trim() || null)
+  };
+
+  if (!updated.account_name) return alert('Account name is required.');
+  if (!isDigitsOnly(updated.account_number)) return alert('Account number must be digits only.');
+  if (!updated.normal_side) return alert('Please choose a Normal Side.');
+  if (!updated.account_category) return alert('Category is required.');
+  if (!updated.statement_type) return alert('Please choose a Statement Type.');
+
+  // check duplicates excluding this account
+  const { data: dupCheck, error: dupErr } = await db
+    .from('accounts')
+    .select('account_id, account_name, account_number')
+    .or(`account_name.eq.${updated.account_name},account_number.eq.${updated.account_number}`)
+    .neq('account_id', accountId);
+
+  if (dupErr) {
+    alert('Error checking duplicates: ' + dupErr.message);
+    return;
+  }
+  if (dupCheck && dupCheck.length) {
+    alert('Another account already uses that name or number.');
+    return;
+  }
+
+  // get "before" snapshot
+  const { data: before, error: beforeErr } = await db
+    .from('accounts')
+    .select('*')
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (beforeErr) {
+    alert('Error loading original account: ' + beforeErr.message);
+    return;
+  }
+
+  const { error } = await db
+    .from('accounts')
+    .update(updated)
+    .eq('account_id', accountId);
+
+  if (error) {
+    alert('Failed to update account: ' + error.message);
+    return;
+  }
+
+  await logEvent('edit_account', before, { account_id: accountId, ...updated });
+  alert('Account updated successfully.');
+  closeModal(editOverlay);
+  await loadAccounts(currentFilters());
+}
+
+// Deactivate 
 async function submitDeactivate(e) {
   e.preventDefault();
   const acctNum = deactivateSelect.value;
@@ -209,7 +323,7 @@ async function submitDeactivate(e) {
   await loadAccounts(currentFilters());
 }
 
-// ---------- Helpers ----------
+// Helpers 
 function currentFilters() {
   return {
     searchTerm: (searchInput?.value || '').trim(),
@@ -220,11 +334,10 @@ function currentFilters() {
   };
 }
 
-// ---------- Events ----------
+// Events
 document.addEventListener('DOMContentLoaded', () => {
   loadAccounts();
 
-  // Search/filters
   const run = () => loadAccounts(currentFilters());
   applyFilters?.addEventListener('click', run);
   clearFilters?.addEventListener('click', () => {
@@ -244,6 +357,18 @@ document.addEventListener('DOMContentLoaded', () => {
   popup?.addEventListener('click', (e) => { if (e.target === popup) closeModal(popup); });
   form?.addEventListener('submit', submitAccount);
 
+  // Edit account popup
+  editBtn?.addEventListener('click', async () => {
+    await populateEditOptions();
+    openModal(editOverlay);
+  });
+  closeEditBtn?.addEventListener('click', () => closeModal(editOverlay));
+  editOverlay?.addEventListener('click', (e) => { if (e.target === editOverlay) closeModal(editOverlay); });
+  editSelect?.addEventListener('change', (e) => {
+    if (e.target.value) fillEditForm(e.target.value);
+  });
+  editForm?.addEventListener('submit', submitEditAccount);
+
   // Deactivate popup
   deactivateBtn?.addEventListener('click', async () => {
     await populateDeactivateOptions();
@@ -252,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
   closeDeactivateBtn?.addEventListener('click', () => closeModal(deactivateOverlay));
   deactivateOverlay?.addEventListener('click', (e) => { if (e.target === deactivateOverlay) closeModal(deactivateOverlay); });
 
-  // Legacy popup close (not used now)
   closeLedger?.addEventListener('click', () => closeModal(ledgerPopup));
   ledgerPopup?.addEventListener('click', (e) => { if (e.target === ledgerPopup) closeModal(ledgerPopup); });
 });

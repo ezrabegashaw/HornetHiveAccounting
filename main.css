@@ -4,7 +4,7 @@
 /* If sidebar is rendered twice, hide the second one */
 .sidebar + .sidebar { display: none; }
 
-/* ===== main.css (sidebar layout + top-left logo) ===== */
+/* main.css (sidebar layout + top-left logo) */
 :root{
   --green:#2BA060;
   --green-dark:#1f5a37;
@@ -60,7 +60,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 }
 .nav a:hover,.nav a[aria-current="page"]{background:rgba(255,255,255,.12)}
 
-/* Logout area (optional) */
+/* Logout area */
 .sidebar-footer{margin-top:auto;display:flex;flex-direction:column;gap:10px}
 .btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer}
 .btn:hover{background:#278b54}
@@ -133,7 +133,7 @@ button:hover,.button:hover{background:#278b54}
 /* Hide user info block on auth pages */
 .auth-page .topbar .user{display:none}
 
-/* ===== popup calendar toggle ===== */
+/* Popup calendar toggle */
 .calendar-popup {
   position: fixed;
   top: 12px;
@@ -147,7 +147,7 @@ button:hover,.button:hover{background:#278b54}
   padding: 12px;
   z-index: 9999;
   font-family: var(--font);
-  display: none; /* hidden by default */
+  display: none;
 }
 .calendar-popup.show { display: block; animation: fadeIn 0.15s ease; }
 

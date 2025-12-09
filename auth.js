@@ -1,4 +1,3 @@
-// auth.js
 const { createClient } = supabase;
 
 // Supabase project info
@@ -39,9 +38,9 @@ async function ensureUniqueUsername(desired) {
   return `${desired.toLowerCase()}-${n}`;
 }
 
-/* ----------------------------------------------------------------
-   SIGNUP  (calls backend)
-------------------------------------------------------------------*/
+/* 
+   Signup
+*/
 async function signupUser(data) {
   try {
     const response = await fetch(`${API_BASE}/signup`, {
@@ -63,9 +62,9 @@ async function signupUser(data) {
   }
 }
 
-/* ----------------------------------------------------------------
-   LOGIN by USERNAME  (calls backend)
-------------------------------------------------------------------*/
+/*
+   Login by username
+*/
 async function loginUserByUsername(username, password) {
   const attemptsKey = `attempts_${username}`;
   let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
@@ -116,9 +115,9 @@ async function loginUserByUsername(username, password) {
   }
 }
 
-/* ----------------------------------------------------------------
-   (Legacy) LOGIN by EMAIL  – unchanged
-------------------------------------------------------------------*/
+/* 
+   Login by email (legacy)
+*/
 async function loginUser(email, password) {
   const { data, error } = await supabaseClient
     .from("users")
@@ -151,9 +150,9 @@ async function loginUser(email, password) {
   return { user: data };
 }
 
-/* ----------------------------------------------------------------
-   SESSION / RBAC HELPERS
-------------------------------------------------------------------*/
+/* 
+   Session / RBAC helpers
+*/
 function setSession(user) {
   localStorage.setItem("user_id", user.id);
   localStorage.setItem("username", user.username || user.email || "");
@@ -172,9 +171,9 @@ function logout() {
   window.location = "HornetHiveLogin.html";
 }
 
-/* ----------------------------------------------------------------
-   ROLE/ACTIVE LOOKUPS (by email) — compatibility
-------------------------------------------------------------------*/
+/* 
+   Role/Active lookups (by email)
+*/
 async function getRole(email) {
   const { data, error } = await supabaseClient
     .from("users")
@@ -201,7 +200,7 @@ async function isActive(email) {
   return { error: "No role found" };
 }
 
-// Show Accounts link for Accountant or Manager users (if the page includes the element)
+// Show Accounts link for Accountant or Manager users
 function showAccountsLinkForAcctMgr() {
   try {
     const el = document.getElementById('accountsForAcctMgr');
@@ -210,7 +209,6 @@ function showAccountsLinkForAcctMgr() {
     if (role === 'accountant' || role === 'manager') el.style.display = 'block';
     else el.style.display = 'none';
   } catch (e) {
-    // ignore
   }
 }
 document.addEventListener('DOMContentLoaded', showAccountsLinkForAcctMgr);

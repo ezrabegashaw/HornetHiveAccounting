@@ -1,8 +1,6 @@
-// income_statement.js
-
 const db = window.supabaseClient;
 
-// ---------- Formatting ----------
+// Formatting 
 function fmt(amount) {
   const n = Number(amount || 0);
   return n.toLocaleString(undefined, {
@@ -37,7 +35,7 @@ function addRow(tbody, label, amount, opts = {}) {
   tbody.appendChild(tr);
 }
 
-// ---------- Data source ----------
+// Data source 
 async function getAccountData() {
   try {
     const { data, error } = await db
@@ -77,7 +75,7 @@ async function getAccountData() {
   }
 }
 
-// ---------- Build Income Statement ----------
+// Build Income Statement 
 async function buildIncomeStatement() {
   const periodLine = document.getElementById("periodLine");
   const body = document.getElementById("incomeBody");
@@ -113,7 +111,7 @@ async function buildIncomeStatement() {
     String(r.account_category || "").toLowerCase() === "expense"
   );
 
-  // ---------- Revenues ----------
+  // Revenues 
   addRow(body, "Revenues", null, { section: true });
 
   let totalRevenue = 0;
@@ -130,10 +128,10 @@ async function buildIncomeStatement() {
 
   addRow(body, "Total Revenues", totalRevenue, { underline: "single" });
 
-  // spacer
+  // Spacer
   addRow(body, "", null);
 
-  // ---------- Expenses ----------
+  // Expenses 
   addRow(body, "Expenses", null, { section: true });
 
   let totalExpenses = 0;
@@ -148,10 +146,10 @@ async function buildIncomeStatement() {
 
   addRow(body, "Total Expenses", totalExpenses, { underline: "single" });
 
-  // spacer
+  // Spacer
   addRow(body, "", null);
 
-  // ---------- Net Income ----------
+  // Net Income 
   const netIncome = totalRevenue - totalExpenses;
   addRow(body, "Net Income", netIncome, {
     underline: "double",

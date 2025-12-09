@@ -1,6 +1,4 @@
 // Dynamically injects the correct sidebar based on user role
-// Usage: Place <div id="sidebar"></div> in your HTML where the sidebar should appear
-// and include this script after auth.js
 
 document.addEventListener('DOMContentLoaded', async () => {
 	// Try to get role from localStorage (set at login)

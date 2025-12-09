@@ -132,7 +132,7 @@ async function loadTrialBalance() {
     let normal = (acc.normal_side || "").toLowerCase() === "debit" ? "debit" : "credit";
     const balRaw = Number(acc.balance || 0);
 
-    // ✅ Force Dividends Declared (3200) to appear as credit
+    // Force Dividends Declared (3200) to appear as credit
     if (acc.account_number === "3200") {
       normal = "credit";
     }
@@ -204,7 +204,7 @@ async function loadTrialBalance() {
   const firstCreditCell = creditCells.find(cell => parseFloat(cell.textContent.replace(/,/g)) !== 0);
   if (firstCreditCell) firstCreditCell.textContent = `$${firstCreditCell.textContent}`;
 
-  // ✅ Only show a message if it is *not* balanced
+  // Only show a message if it is *not* balanced
   if (Math.abs(totalDebit - totalCredit) >= 0.005) {
     msgEl.className = "tb-msg tb-warn";
     msgEl.textContent = `Trial Balance does NOT balance. Difference: ${fmt(totalDebit - totalCredit)} (Debit - Credit).`;

@@ -11,8 +11,6 @@ async function showLoggedUser() {
     document.getElementById("loggedUser").textContent = `Welcome, ${userName}`;
 }
 showLoggedUser();
-
-// Update clock
 function updateClock() {
     const now = new Date();
     const options = {
@@ -36,7 +34,6 @@ document.getElementById("serviceSelect").addEventListener("change", (e) => {
         loadAccounts();
     }
     if (selected === "deactivate") {
-        // You can add deactivate UI logic here
     }
 });
 
@@ -47,7 +44,6 @@ document.getElementById("addAccountForm").addEventListener("submit", async (e) =
     const formData = new FormData(form);
     const account = Object.fromEntries(formData.entries());
 
-    // Validation
     if (!/^\d+$/.test(account.accountNumber)) {
         alert("Account number must be numeric only.");
         return;
@@ -136,10 +132,9 @@ document.getElementById("searchBar").addEventListener("input", async (e) => {
     });
 });
 
-// View ledger (placeholder)
+// View ledger 
 function viewLedger(accountNumber) {
     alert(`Redirecting to ledger for account ${accountNumber}`);
-    // You can implement actual routing or modal here
 }
 
 // Event logging

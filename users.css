@@ -1,6 +1,6 @@
 /* Modal styles */
 .modal {
-    display: none; /* hidden by default */
+    display: none;
     position: fixed;
     z-index: 1000;
     left: 0;

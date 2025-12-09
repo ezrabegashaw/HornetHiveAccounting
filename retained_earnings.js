@@ -82,13 +82,11 @@ async function loadStatement() {
 
   const netIncome = totalRevenue - totalExpense;
 
-  // For this project scenario: beginning retained earnings is 0.
-  // (If you later store beginning RE, plug it in here.)
+  // Beginning retained earnings is 0
   const beginRE = 0;
 
   const endingRE = beginRE + netIncome - dividends;
 
-  // Fill in cells:
   // Beginning RE: show $, no underline
   setValue('beginRE', beginRE, { dollar:true });
 

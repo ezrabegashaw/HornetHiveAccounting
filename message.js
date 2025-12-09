@@ -1,11 +1,9 @@
-// message.js
 // Handles bell, dropdown, message loading, unread highlight, and replies
 
 (function () {
   const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-  // Try to reuse existing client from auth.js, else create our own
   let supabaseClient = window.supabaseClient;
   if (!supabaseClient && window.supabase) {
     const { createClient } = window.supabase;
@@ -21,7 +19,6 @@
   let currentUsername = null;
 
   document.addEventListener("DOMContentLoaded", async () => {
-    // Try to get user_id from your existing session helper
     currentUserId = localStorage.getItem("user_id") || null;
     currentUsername = localStorage.getItem("username") || "Admin";
 
@@ -117,7 +114,7 @@
             return;
           }
 
-          // Insert reply (back to original sender)
+          // Insert reply
           const { error: insertError } = await supabaseClient.from("messages").insert({
             sender_id: currentUserId,
             receiver_id: msg.sender_id,

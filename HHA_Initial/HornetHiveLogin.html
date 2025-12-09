@@ -36,13 +36,11 @@
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
-    // Project URL + anon key
     const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // DOM elements
     const authForm = document.getElementById("auth-form");
     const signupLink = document.getElementById("signup-link");
     const loginLink = document.getElementById("login-link");
