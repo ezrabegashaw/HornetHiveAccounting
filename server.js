@@ -32,17 +32,22 @@ app.use((req, _res, next) => {
 });
 
 //
-// ⭐ STATIC HOSTING FOR YOUR FRONTEND ⭐
+// STATIC HOSTING FOR YOUR FRONTEND
 //
 app.use(express.static(path.join(__dirname, "public")));
 
 // Homepage
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "HornetHiveLogin.html"));
+  res.sendFile(path.join(__dirname, "HornetHiveLogin.html"));
 });
 
 // Favicon route to prevent 404 spam
-app.get("/favicon.ico", (req, res) => res.sendFile(path.join(__dirname, "public", "favicon.ico")));
+app.get("/favicon.ico", (req, res) => {
+  const faviconPath = path.join(__dirname, "favicon.ico");
+  res.sendFile(faviconPath, err => {
+    if (err) res.status(404).end();
+  });
+});
 
 //
 // Supabase Clients
