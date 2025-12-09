@@ -43,6 +43,7 @@
             <a href="CreateNewPassword.html" id="forgotpassword-link">Forgot password</a>
           </div>
           <button type="submit" class="login-btn">Login</button>
+          <button onclick="clearInput()">Clear</button>
         </form>
       </div>
     </main>
@@ -79,6 +80,12 @@
       }
     });
   });
+
+  // clear user input
+  function clearInput() {
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+  }
 </script>
 
 

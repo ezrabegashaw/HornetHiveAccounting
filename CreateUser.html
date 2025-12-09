@@ -60,6 +60,7 @@
             <input type="password" id="password" placeholder="Password" required>
             <input type="password" id="confirm-password" placeholder="Confirm Password" required>
             <button type="submit" class="signup-btn" id="signup-button">Submit</button>
+            <button type="button" class="signup-btn" id="clear-btn">Clear</button>
           </form>
           
           
@@ -161,6 +162,20 @@
           alert("Unexpected error occurred. See console for details.");
         }
       });
+
+      // Clear button: reset the form and clear generated username flag
+      const clearBtn = document.getElementById('clear-btn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          signupForm.reset();
+          // ensure username field is cleared and generated flag removed
+          if (userEl) {
+            userEl.value = '';
+            delete userEl.dataset.generated;
+          }
+          firstEl.focus();
+        });
+      }
     });
   </script>
   
