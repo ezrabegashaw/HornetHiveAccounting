@@ -6,7 +6,14 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 if (!window.supabaseClient) window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const supabaseClient = window.supabaseClient;
 
-const API_BASE = `http://127.0.0.1:3333/api`;
+// Detect if running on Render or locally
+const isLocal = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
+
+// Use Render URL in production, local URL if developing
+const API_BASE = isLocal
+  ? "http://127.0.0.1:3333/api"
+  : "https://hornethiveaccounting.onrender.com/api";
+
 
 async function loginUserByUsername(username, password) {
   try {

@@ -11,7 +11,11 @@ const app = express();
 const PORT = process.env.PORT || 3333;
 
 // ===== Middleware =====
-app.use(cors());
+app.use(cors({
+  origin: '*', // allow all origins
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
 app.use(express.json());
 
 // Serve static files (HTML, CSS, JS) from project root
