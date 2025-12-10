@@ -1,21 +1,13 @@
 const { createClient } = supabase;
 
-// Supabase project info
 const SUPABASE_URL = "https://rsthdogcmqwcdbqppsrm.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdGhkb2djbXF3Y2RicXBwc3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNTY3NDcsImV4cCI6MjA3MTYzMjc0N30.EoOxjSIjGHbw6ltNisWYq6yKXdrOfE6XVdh5mERbrSY";
 
-if (!window.supabaseClient) {
-  window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
+if (!window.supabaseClient) window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const supabaseClient = window.supabaseClient;
-window.USE_SUPABASE = true;
 
-// Dynamic API_BASE for both local and Render deployment
-const API_BASE = window.location.origin + "/api";
+const API_BASE = `http://127.0.0.1:3333/api`;
 
-// ===== LOGIN =====
 async function loginUserByUsername(username, password) {
   try {
     const response = await fetch(`${API_BASE}/login`, {
@@ -24,13 +16,21 @@ async function loginUserByUsername(username, password) {
       body: JSON.stringify({ username, password }),
     });
 
-    const result = await response.json();
+    // Always try/catch json parsing
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error("Server did not return valid JSON");
+    }
 
-    if (!response.ok) return { user: null, error: result };
+    if (!response.ok) {
+      return { user: null, error: result };
+    }
 
     return { user: result.user, error: null };
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("Network or fetch error:", err);
     return { user: null, error: { message: err.message } };
   }
 }
@@ -43,11 +43,10 @@ async function signupUser(data) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    const result = await response.json();
-    if (!response.ok) return { error: result };
+    const resData = await response.json();
+    if (!response.ok) return { error: resData };
     return { error: null };
   } catch (err) {
-    console.error("Signup error:", err);
     return { error: { message: err.message } };
   }
 }
@@ -62,5 +61,5 @@ function setSession(user) {
 
 function logout() {
   localStorage.clear();
-  window.location = "HornetHiveLogin.html";
+  window.location.href = "HornetHiveLogin.html";
 }

@@ -21,11 +21,14 @@
 <script>
   function updateClock() {
     const now = new Date();
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    const options = {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    };
     document.getElementById('dateTime').textContent = now.toLocaleString(undefined, options);
   }
-  updateClock(); setInterval(updateClock, 1000);
+  updateClock();
+  setInterval(updateClock, 1000);
 </script>
 
 <div class="auth-shell">
@@ -43,51 +46,52 @@
             <a href="CreateNewPassword.html" id="forgotpassword-link">Forgot password</a>
           </div>
           <button type="submit" class="login-btn">Login</button>
-          <button onclick="clearInput()">Clear</button>
+          <button type="button" onclick="clearInput()">Clear</button>
         </form>
       </div>
     </main>
   </div>
 </div>
 
-<!-- LOGIN SCRIPT WITH DEBUGGING -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById('auth-form');
+    const form = document.getElementById("auth-form");
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const username = document.getElementById('username').value.trim().toLowerCase();
-      const password = document.getElementById('password').value;
+
+      const username = document.getElementById("username").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
 
       try {
         const { user, error } = await loginUserByUsername(username, password);
+
         if (error) {
-          alert("Login failed: " + (error.message || error));
+          alert("Login failed: " + (error.message || JSON.stringify(error)));
           return;
         }
 
-        setSession(user); // keep your existing session function
+        // Save session
+        setSession(user);
 
-        if (user.role === 'Admin') {
-          window.location.href = 'AdminDashBoard.html';
+        // Redirect based on role
+        if (user.role && user.role.toLowerCase() === "admin") {
+          window.location.href = "AdminDashBoard.html";
         } else {
-          window.location.href = 'Dashboard.html';
+          window.location.href = "Dashboard.html";
         }
       } catch (err) {
         console.error("Unexpected login error:", err);
-        alert("Unexpected login error. See console for details.");
+        alert("Unexpected login error. Check console for details.");
       }
     });
   });
 
-  // clear user input
   function clearInput() {
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
   }
 </script>
-
 
 </body>
 </html>
