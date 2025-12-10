@@ -1,10 +1,11 @@
-// server.js — cleaned version for Render / Railway / Fly
+// server.js — cleaned and ready for Render
 require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const fs = require('fs');
 
 const SALT_ROUNDS = 12;
 const app = express();
@@ -16,7 +17,7 @@ const HOST = '0.0.0.0';
 -------------------------------*/
 console.log("=== SERVER STARTING ===");
 console.log("NODE_ENV:", process.env.NODE_ENV || 'undefined');
-console.log("PORT:", PORT);
+console.log("PORT (env or fallback):", process.env.PORT || 3333);
 console.log("SUPABASE_URL present?", !!process.env.SUPABASE_URL);
 console.log("SUPABASE_ANON_KEY present?", !!process.env.SUPABASE_ANON_KEY || !!process.env.SUPABASE_KEY);
 console.log("SUPABASE_SERVICE_ROLE_KEY present?", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -24,22 +25,18 @@ console.log("EMAIL_USER present?", !!process.env.EMAIL_USER);
 console.log("EMAIL_PASS present?", !!process.env.EMAIL_PASS);
 
 /* ------------------------------
-   ULTRA-PERMISSIVE CORS (DEV)
-   Tighten in production to your frontend origin
+   CORS (DEV-friendly; tighten for production)
 -------------------------------*/
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_ORIGIN || '*'); // tighten in prod
+  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_ORIGIN || '*'); // set FRONTEND_ORIGIN in prod
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    req.header('Access-Control-Request-Headers') || 'Content-Type, Authorization'
-  );
+  res.setHeader('Access-Control-Allow-Headers', req.header('Access-Control-Request-Headers') || 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
 /* ------------------------------
-   PARSING + REQUEST LOGGING
+   PARSERS + REQUEST LOGGING
 -------------------------------*/
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -102,54 +99,63 @@ function supabaseAdmin() {
 }
 
 /* ------------------------------
-   MAILER (Gmail note below)
+   MAILER (note: app passwords for Gmail recommended)
 -------------------------------*/
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS // recommended: use an app password, not account password
+    user: process.env.EMAIL_USER || '',
+    pass: process.env.EMAIL_PASS || ''
   }
 });
 
 /* ------------------------------
-   HEALTH CHECK
+   BASIC ROUTES (root + health + examples)
 -------------------------------*/
+app.get('/', (req, res) => {
+  res.send('HornetHive backend — root ok');
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// example API route
+app.get('/api/ping', (_req, res) => {
+  res.json({ pong: true });
+});
+
 /* ------------------------------
-   API ROUTES (example placeholders)
-   Put your real /api/* route handlers here
+   HELPER: list registered routes (for debugging)
 -------------------------------*/
-app.post('/api/signup', async (req, res) => {
-  // example: use supabaseClient() and bcrypt here
-  return res.json({ ok: true, note: 'signup endpoint placeholder' });
-});
+function listRoutes() {
+  const routes = [];
+  if (!app._router) return routes;
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      const methods = Object.keys(middleware.route.methods).join(',');
+      routes.push(`${methods.toUpperCase()} ${middleware.route.path}`);
+    } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          const methods = Object.keys(handler.route.methods).join(',');
+          routes.push(`${methods.toUpperCase()} ${handler.route.path}`);
+        }
+      });
+    }
+  });
+  return routes;
+}
 
-app.post('/api/login', async (req, res) => {
-  return res.json({ ok: true, note: 'login endpoint placeholder' });
-});
-
-app.get('/api/health-supabase', async (_req, res) => {
-  const sb = supabaseClient();
-  if (!sb) return res.status(500).json({ ok: false, error: 'Supabase client missing' });
-  try {
-    // tiny check: call Postgres health or simple query if you have a safe table
-    const result = await sb.from('pg_catalog.pg_tables').select('*').limit(1); // won't work if table doesn't exist; optional
-    return res.json({ ok: true, supabase: true });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: String(err) });
-  }
+app.get('/routes', (_req, res) => {
+  res.json({ routes: listRoutes() });
 });
 
 /* ------------------------------
-   SHIM ROUTES (keeps old paths working)
+   SHIM ROUTES (keep legacy endpoints working)
 -------------------------------*/
 const shim = (from, to, method = 'post') => {
   app[method](from, (req, res, next) => {
-    // forward the request to internal path
     req.url = to;
     app._router.handle(req, res, next);
   });
@@ -163,31 +169,37 @@ shim('/approve', '/api/approve', 'get');
 shim('/reject', '/api/reject', 'get');
 
 /* ------------------------------
+   YOUR API IMPLEMENTATIONS (placeholders)
+   Replace with your real logic/routers as needed.
+-------------------------------*/
+app.post('/api/signup', async (req, res) => {
+  // TODO: implement signup using supabaseClient() and bcrypt
+  return res.json({ ok: true, note: 'signup placeholder' });
+});
+
+app.post('/api/login', async (req, res) => {
+  // TODO: implement login
+  return res.json({ ok: true, note: 'login placeholder' });
+});
+
+/* ------------------------------
    STATIC FRONTEND SERVE (production)
-   If you build a client into "client/build", serve that.
-   Otherwise, this will serve `public/` if present.
 -------------------------------*/
 const clientBuildPath = path.join(__dirname, 'client', 'build');
 const publicPath = path.join(__dirname, 'public');
 
-if (process.env.NODE_ENV === 'production' && require('fs').existsSync(clientBuildPath)) {
+if (process.env.NODE_ENV === 'production' && fs.existsSync(clientBuildPath)) {
   console.log('Serving client from', clientBuildPath);
   app.use(express.static(clientBuildPath));
-  // fallback for SPA (only for non /api routes)
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API route not found' });
     res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
-} else if (require('fs').existsSync(publicPath)) {
+} else if (fs.existsSync(publicPath)) {
   console.log('Serving static files from', publicPath);
   app.use(express.static(publicPath));
-  // example special-case root page if present
+  // if you want a specific root page in public:
   app.get('/', (req, res) => res.sendFile(path.join(publicPath, 'HornetHiveLogin.html')));
-} else {
-  // fallback simple root for quick verification
-  app.get('/', (req, res) => {
-    res.send('HornetHive backend — API is up. Use /api/... for endpoints.');
-  });
 }
 
 /* ------------------------------
@@ -203,4 +215,5 @@ app.use((req, res) => {
 -------------------------------*/
 app.listen(PORT, HOST, () => {
   console.log(`HornetHive backend running on ${HOST}:${PORT}`);
+  console.log('Registered routes:', listRoutes());
 });
