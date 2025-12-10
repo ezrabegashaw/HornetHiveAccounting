@@ -12,7 +12,7 @@ const isLocal = window.location.hostname === "127.0.0.1" || window.location.host
 // Use Render URL in production, local URL if developing
 const API_BASE = isLocal
   ? "http://127.0.0.1:3333/api"
-  : "https://hornethiveaccounting.onrender.com/api";
+  : "https://hornethiveaccounting-1.onrender.com/api";
 
 
 async function loginUserByUsername(username, password) {
