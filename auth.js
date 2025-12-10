@@ -12,63 +12,11 @@ if (!window.supabaseClient) {
 const supabaseClient = window.supabaseClient;
 window.USE_SUPABASE = true;
 
-const API_BASE = `http://127.0.0.1:3333/api`;
+// Dynamic API_BASE for both local and Render deployment
+const API_BASE = window.location.origin + "/api";
 
-function baseUsername(first_name, last_name, when = new Date()) {
-  const mm = String(when.getMonth() + 1).padStart(2, "0");
-  const yy = String(when.getFullYear()).slice(-2);
-  const f = (first_name || "").trim().charAt(0);
-  const l = (last_name || "").trim().replace(/\s+/g, "");
-  return (f + l + mm + yy).toLowerCase();
-}
-
-async function ensureUniqueUsername(desired) {
-  const { data, error } = await supabaseClient
-    .from("users")
-    .select("username")
-    .ilike("username", `${desired}%`);
-
-  if (error || !data || data.length === 0) return desired;
-
-  const existing = new Set(data.map((r) => (r.username || "").toLowerCase()));
-  if (!existing.has(desired.toLowerCase())) return desired;
-
-  let n = 2;
-  while (existing.has(`${desired.toLowerCase()}-${n}`)) n++;
-  return `${desired.toLowerCase()}-${n}`;
-}
-
-/* 
-   Signup
-*/
-async function signupUser(data) {
-  try {
-    const response = await fetch(`${API_BASE}/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-
-    const result = await response.json();
-    if (!response.ok) {
-      console.error('Backend signup error:', result);
-      return { error: result };
-    }
-    console.log('Signup success:', result);
-    return { error: null };
-  } catch (err) {
-    console.error('Unexpected signup error:', err);
-    return { error: { message: err.message } };
-  }
-}
-
-/*
-   Login by username
-*/
+// ===== LOGIN =====
 async function loginUserByUsername(username, password) {
-  const attemptsKey = `attempts_${username}`;
-  let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
-
   try {
     const response = await fetch(`${API_BASE}/login`, {
       method: "POST",
@@ -78,81 +26,33 @@ async function loginUserByUsername(username, password) {
 
     const result = await response.json();
 
-    if (!response.ok) {
-      if (response.status === 403 && result.error?.toLowerCase().includes("approval")) {
-        window.location.href = "PendingPage.html";
-        return { user: null, error: { message: "Awaiting approval" } };
-      }
+    if (!response.ok) return { user: null, error: result };
 
-      if (response.status === 401 && result.error?.toLowerCase().includes("password")) {
-        attempts++;
-        localStorage.setItem(attemptsKey, attempts);
-
-        if (attempts >= 3) {
-          await fetch(`${API_BASE}/lock-account`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username }),
-          });
-          localStorage.removeItem(attemptsKey);
-          return { user: null, error: { message: "Account locked due to too many failed attempts." } };
-        }
-
-        return {
-          user: null,
-          error: { message: `Incorrect password. Attempt ${attempts} of 3.` },
-        };
-      }
-
-      return { user: null, error: { message: result.error || "Unexpected login error." } };
-    }
-
-    localStorage.removeItem(attemptsKey);
     return { user: result.user, error: null };
   } catch (err) {
     console.error("Login error:", err);
-    return { user: null, error: { message: "Network or server error. Please try again later." } };
+    return { user: null, error: { message: err.message } };
   }
 }
 
-/* 
-   Login by email (legacy)
-*/
-async function loginUser(email, password) {
-  const { data, error } = await supabaseClient
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .limit(1)
-    .single();
-
-  if (error) return { error };
-
-  const attemptsKey = `attempts_${email}`;
-  let attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
-
-  if (!data.approved) {
-    window.location.href = "PendingPage.html";
-    return;
+// ===== SIGNUP =====
+async function signupUser(data) {
+  try {
+    const response = await fetch(`${API_BASE}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) return { error: result };
+    return { error: null };
+  } catch (err) {
+    console.error("Signup error:", err);
+    return { error: { message: err.message } };
   }
-
-  if (data.password !== password) {
-    attempts++;
-    localStorage.setItem(attemptsKey, attempts);
-    if (attempts >= 3) {
-      await supabaseClient.from("users").update({ approved: false }).eq("email", email);
-      localStorage.removeItem(attemptsKey);
-    }
-    return { error: "Incorrect password" };
-  }
-
-  localStorage.removeItem(attemptsKey);
-  return { user: data };
 }
 
-/* 
-   Session / RBAC helpers
-*/
+// ===== SESSION HELPERS =====
 function setSession(user) {
   localStorage.setItem("user_id", user.id);
   localStorage.setItem("username", user.username || user.email || "");
@@ -160,55 +60,7 @@ function setSession(user) {
   localStorage.setItem("first_name", user.first_name || "User");
 }
 
-function initRBAC() {
-  const name = localStorage.getItem("first_name") || "User";
-  const el = document.getElementById("userName");
-  if (el) el.textContent = name;
-}
-
 function logout() {
   localStorage.clear();
   window.location = "HornetHiveLogin.html";
 }
-
-/* 
-   Role/Active lookups (by email)
-*/
-async function getRole(email) {
-  const { data, error } = await supabaseClient
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .limit(1)
-    .single();
-
-  if (error) return { error };
-  if (data?.email === email) return data.role;
-  return { error: "No role found" };
-}
-
-async function isActive(email) {
-  const { data, error } = await supabaseClient
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .limit(1)
-    .single();
-
-  if (error) return { error };
-  if (data?.email === email) return data.active;
-  return { error: "No role found" };
-}
-
-// Show Accounts link for Accountant or Manager users
-function showAccountsLinkForAcctMgr() {
-  try {
-    const el = document.getElementById('accountsForAcctMgr');
-    if (!el) return;
-    const role = (localStorage.getItem('role') || '').toLowerCase();
-    if (role === 'accountant' || role === 'manager') el.style.display = 'block';
-    else el.style.display = 'none';
-  } catch (e) {
-  }
-}
-document.addEventListener('DOMContentLoaded', showAccountsLinkForAcctMgr);
